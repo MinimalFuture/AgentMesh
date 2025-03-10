@@ -1,0 +1,4 @@
+models:
+  openai:
+    api_base: "https://api.openai.com/v1"
+    api_key: "YOUR API_KEY"

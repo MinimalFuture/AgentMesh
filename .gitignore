@@ -1,0 +1,11 @@
+.DS_Store
+.idea
+.vscode
+.venv
+.vs
+venv*
+*.pyc
+__pycache__/
+.pytest_cache/
+config.yaml
+tests
