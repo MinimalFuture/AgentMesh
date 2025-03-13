@@ -12,7 +12,7 @@ class AgentTeam:
 
         :param name: The name of the agent group.
         :param description: A description of the agent group.
-        :param rules: The rules governing the agent group.
+        :param rule: The rules governing the agent group.
         """
         self.name = name
         self.description = description
@@ -57,13 +57,13 @@ class AgentTeam:
         # Get the model instance and decide which agent to use
         response = model_client.call_llm(request)
         reply_text = response["choices"][0]["message"]["content"]
-        print(reply_text)
 
         # Parse the response to get the selected agent's id
         selected_agent_id = string_util.json_loads(reply_text)["id"]  # Extract the id from the response
 
         # Find the selected agent based on the id
         selected_agent = self.agents[selected_agent_id]
+        print(f"[Think] First Agent: {selected_agent.name}")
         
         if selected_agent:
             # Call the selected agent's step method
@@ -72,16 +72,18 @@ class AgentTeam:
             print("No agent found with the selected id.")
 
 
-GROUP_DECISION_PROMPT = """As an expert in team task allocation, your role is to select the most suitable team member to initially address the task at hand. After the task is completed, the results will pass to next member.
+GROUP_DECISION_PROMPT = """## Role
+As an expert in team task allocation, your role is to select the most suitable team member to initially address the task at hand. After the task is completed, the results will pass to next member.
 
+## Team
 Team Name: {group_name}
 Team Description: {group_description}
 Team Rules: {group_rules}
 
-List of team members:
+## List of team members:
 {agents_str}
 
-User Question:
+## User Question:
 {user_question}
 
 Please return the result in the following JSON structure which can be parsed directly by json.loads(), no extra content:

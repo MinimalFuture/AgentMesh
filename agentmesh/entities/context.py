@@ -14,4 +14,10 @@ class GroupContext:
         self.agents = agents
         self.user_question = ""
         # List of agents that have been executed
-        self.executed_agents = []
+        self.agent_outputs: list = []
+
+
+class AgentOutput:
+    def __init__(self, agent_name: str, output: str):
+        self.agent_name = agent_name
+        self.output = output
