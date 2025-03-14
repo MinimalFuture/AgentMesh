@@ -15,7 +15,7 @@ class ModelClient:
             raise Exception("No model config")
         return LLMModel(model=model_name, api_base=model_config.get("api_base"), api_key=model_config.get("api_key"))
     
-    def call_llm(self, request: LLMRequest):
+    def llm(self, request: LLMRequest):
         """
         Call the model using the provided request parameters.
 

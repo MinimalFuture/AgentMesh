@@ -1,4 +1,4 @@
-class GroupContext:
+class TeamContext:
     def __init__(self, name: str, description: str, rule: str, agents: list):
         """
         Initialize the GroupContext with a name, description, rules, a list of agents, and a user question.
@@ -12,7 +12,7 @@ class GroupContext:
         self.description = description
         self.rule = rule
         self.agents = agents
-        self.user_question = ""
+        self.user_task = ""
         # List of agents that have been executed
         self.agent_outputs: list = []
 

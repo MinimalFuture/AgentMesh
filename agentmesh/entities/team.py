@@ -2,7 +2,7 @@ from agentmesh.common.utils import string_util
 from agentmesh.entities.agent import Agent
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
-from agentmesh.entities.context import GroupContext
+from agentmesh.entities.context import TeamContext
 
 
 class AgentTeam:
@@ -18,9 +18,9 @@ class AgentTeam:
         self.description = description
         self.rule = rule
         self.agents = []
-        self.context = GroupContext(name, description, rule, agents=self.agents)
+        self.context = TeamContext(name, description, rule, agents=self.agents)
 
-    def add_agent(self, agent: Agent):
+    def add(self, agent: Agent):
         """
         Add an agent to the group.
 
@@ -29,11 +29,11 @@ class AgentTeam:
         agent.group_context = self.context  # Pass the group context to the agent
         self.agents.append(agent)
 
-    def run(self, user_question: str):
+    def run(self, task: str):
         """
         Decide which agent will handle the task and execute its step method.
         """
-        self.context.user_question = user_question
+        self.context.user_task = task
         model_client = ModelClient()
 
         # Generate agents_str from the list of agents
@@ -43,7 +43,7 @@ class AgentTeam:
         )
         print(agents_str)
         prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description, 
-                                              group_rules=self.rule, agents_str=agents_str, user_question=user_question)
+                                              group_rules=self.rule, agents_str=agents_str, user_question=task)
         
         request = LLMRequest(model_provider="openai",
                              model="gpt-4o-mini",
@@ -55,7 +55,7 @@ class AgentTeam:
                              max_tokens=150,
                              json_format=True)
         # Get the model instance and decide which agent to use
-        response = model_client.call_llm(request)
+        response = model_client.llm(request)
         reply_text = response["choices"][0]["message"]["content"]
 
         # Parse the response to get the selected agent's id

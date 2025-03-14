@@ -1,6 +1,6 @@
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
-from agentmesh.entities.context import GroupContext, AgentOutput
+from agentmesh.entities.context import TeamContext, AgentOutput
 from agentmesh.common.utils import string_util
 
 
@@ -19,7 +19,7 @@ class Agent:
         self.system_prompt = system_prompt
         self.model = model
         self.description = description
-        self.group_context: GroupContext = group_context  # Store reference to group context if provided
+        self.group_context: TeamContext = group_context  # Store reference to group context if provided
 
     def step(self):
         """
@@ -32,7 +32,7 @@ class Agent:
                                                 group_description=self.group_context.description,
                                                 group_rules=self.group_context.rule, current_agent_name=self.name,
                                                 agent_outputs_list=self._fetch_agents_outputs(),
-                                                user_question=self.group_context.user_question)
+                                                user_question=self.group_context.user_task)
 
         request = LLMRequest(model_provider="openai", model=self.model,
                              messages=[
@@ -43,7 +43,7 @@ class Agent:
                              max_tokens=150,
                              json_format=True)
 
-        response = model_client.call_llm(request)
+        response = model_client.llm(request)
         reply_text = response["choices"][0]["message"]["content"]
         print(f"{self.name} agent reply: {reply_text}")
         self.group_context.agent_outputs.append(AgentOutput(agent_name=self.name, output=reply_text))
@@ -73,7 +73,7 @@ class Agent:
                                               agent_reply=reply_text,
                                               group_rules=self.group_context.rule,
                                               agent_outputs_list=agent_outputs_list, agents_str=agents_str,
-                                              user_question=self.group_context.user_question)
+                                              user_question=self.group_context.user_task)
         print(f"[Think] {self.name} start think...")
         request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
                              messages=[{"role": "user", "content": prompt}],
@@ -81,7 +81,7 @@ class Agent:
                              max_tokens=10,
                              json_format=True)
 
-        response = model_client.call_llm(request)
+        response = model_client.llm(request)
         decision_text = response["choices"][0]["message"]["content"]
         try:
             selected_agent_id = string_util.json_loads(decision_text).get("id")
