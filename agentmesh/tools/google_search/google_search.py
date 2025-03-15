@@ -1,6 +1,7 @@
 import requests
 from agentmesh.tools.base_tool import BaseTool
 
+
 class GoogleSearchTool(BaseTool):
     name: str = "google_search"
     description: str = "A tool to perform Google searches using the Serper API."
@@ -14,6 +15,7 @@ class GoogleSearchTool(BaseTool):
         },
         "required": ["query"]
     }
+    config: dict = {}
 
     def _run(self, args: dict) -> dict:
         api_key = "YOUR API KEY"  # Replace with your actual API key

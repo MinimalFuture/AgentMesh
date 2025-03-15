@@ -2,6 +2,7 @@ from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
 from agentmesh.entities.context import TeamContext, AgentOutput
 from agentmesh.common.utils import string_util
+from agentmesh.tools.base_tool import BaseTool
 
 
 class Agent:
@@ -20,6 +21,13 @@ class Agent:
         self.model = model
         self.description = description
         self.group_context: TeamContext = group_context  # Store reference to group context if provided
+        self.subtask: str = ""
+        self.tools: list = []
+        self.max_react_steps = 5     # max ReAct steps
+        self.conversation_history = []
+
+    def add_tool(self, tool: BaseTool):
+        self.tools.append(tool)
 
     def step(self):
         """
@@ -32,7 +40,8 @@ class Agent:
                                                 group_description=self.group_context.description,
                                                 group_rules=self.group_context.rule, current_agent_name=self.name,
                                                 agent_outputs_list=self._fetch_agents_outputs(),
-                                                user_question=self.group_context.user_task)
+                                                user_task=self.group_context.user_task,
+                                                subtask=self.subtask)
 
         request = LLMRequest(model_provider="openai", model=self.model,
                              messages=[
@@ -46,10 +55,14 @@ class Agent:
         response = model_client.llm(request)
         reply_text = response["choices"][0]["message"]["content"]
         print(f"{self.name} agent reply: {reply_text}")
+        
         self.group_context.agent_outputs.append(AgentOutput(agent_name=self.name, output=reply_text))
 
         # Logic to decide if another agent is needed
         self.should_invoke_next_agent(reply_text)
+
+
+
 
     def should_invoke_next_agent(self, reply_text: str) -> bool:
         """
@@ -70,10 +83,9 @@ class Agent:
         prompt = AGENT_DECISION_PROMPT.format(group_name=self.group_context.name,
                                               group_description=self.group_context.description,
                                               current_agent_name=self.name,
-                                              agent_reply=reply_text,
                                               group_rules=self.group_context.rule,
                                               agent_outputs_list=agent_outputs_list, agents_str=agents_str,
-                                              user_question=self.group_context.user_task)
+                                              user_task=self.group_context.user_task)
         print(f"[Think] {self.name} start think...")
         request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
                              messages=[{"role": "user", "content": prompt}],
@@ -84,12 +96,15 @@ class Agent:
         response = model_client.llm(request)
         decision_text = response["choices"][0]["message"]["content"]
         try:
+            decision_res = string_util.json_loads(decision_text)
             selected_agent_id = string_util.json_loads(decision_text).get("id")
+            subtask = decision_res.get("subtask")
             if int(selected_agent_id) < 0:
-                print("\n[END] User Task Finished")
+                print("[END] User Task Finished")
                 return True
             selected_agent: Agent = self.group_context.agents[selected_agent_id]
-            print(f"[Think] next agent: {selected_agent.name}")
+            selected_agent.subtask = subtask
+            print(f"[Think] next agent: {selected_agent.name}, subtask: {subtask}")
             selected_agent.step()
         except Exception as e:
             pass
@@ -115,10 +130,15 @@ Your Role: {current_agent_name}
 ## Team members have already output
 {agent_outputs_list}
 
-User Original Question: {user_question}"""
+User Original Task: 
+{user_task}
+
+Your Subtask:
+{subtask}"""
+
 
 AGENT_DECISION_PROMPT = """## Role
-You are an team decision expert, Please decision whether the next member in team is needed to complete the user task. If necessary, select the most suitable member, If not, return {{"id": -1}} directly. 
+You are an team decision expert, Please decision whether the next member in team is needed to complete the user task. If necessary, select the most suitable member and give the subtask that need to be answered by this member, If not, return {{"id": -1}} directly. 
 
 ## Team
 Team Name: {group_name}
@@ -130,10 +150,11 @@ Team Rules: {group_rules}
 
 ## Attention
 1. You need to determine whether the next member is needed and which member is the most suitable based on the user's question and the rules of the team 
-2. If you think the answers given by the executed members are able to answer the user's questions, return {{"id": -1}} immediately; otherwise, select the next suitable member ID in the following JSON structure which can be parsed directly by json.loads(): {{"id": <member_id>}}
+2. If you think the answers given by the executed members are able to answer the user's questions, return {{"id": -1}} immediately; otherwise, select the next suitable member ID and subtask content in the following JSON structure which can be parsed directly by json.loads(): 
+{{"id": <member_id>, "subtask": ""}}
 
 ## Members have replied
 {agent_outputs_list}
 
-## User Original Question:
-{user_question}"""
+## User Original Task:
+{user_task}"""

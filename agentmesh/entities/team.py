@@ -1,5 +1,5 @@
 from agentmesh.common.utils import string_util
-from agentmesh.entities.agent import Agent
+from agentmesh.entities.agent import Agent, AGENT_DECISION_PROMPT
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
 from agentmesh.entities.context import TeamContext
@@ -42,9 +42,17 @@ class AgentTeam:
             for i, agent in enumerate(self.agents)
         )
         print(agents_str)
-        prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description, 
+        prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description,
                                               group_rules=self.rule, agents_str=agents_str, user_question=task)
-        
+
+        # prompt = AGENT_DECISION_PROMPT.format(group_name=self.name,
+        #                                       group_description=self.description,
+        #                                       current_agent_name=self.name,
+        #                                       group_rules=self.rule,
+        #                                       agent_outputs_list="",
+        #                                       agents_str=agents_str,
+        #                                       user_task=task)
+
         request = LLMRequest(model_provider="openai",
                              model="gpt-4o-mini",
                              messages=[{
@@ -54,16 +62,20 @@ class AgentTeam:
                              temperature=0,
                              max_tokens=150,
                              json_format=True)
+
         # Get the model instance and decide which agent to use
         response = model_client.llm(request)
         reply_text = response["choices"][0]["message"]["content"]
 
         # Parse the response to get the selected agent's id
-        selected_agent_id = string_util.json_loads(reply_text)["id"]  # Extract the id from the response
+        decision_res = string_util.json_loads(reply_text)
+        selected_agent_id = decision_res.get("id")  # Extract the id from the response
+        subtask = decision_res.get("subtask")
 
         # Find the selected agent based on the id
-        selected_agent = self.agents[selected_agent_id]
-        print(f"[Think] First Agent: {selected_agent.name}")
+        selected_agent: Agent = self.agents[selected_agent_id]
+        selected_agent.subtask = subtask
+        print(f"[Think] First Agent: {selected_agent.name}, subtask: {subtask}")
         
         if selected_agent:
             # Call the selected agent's step method
@@ -73,7 +85,8 @@ class AgentTeam:
 
 
 GROUP_DECISION_PROMPT = """## Role
-As an expert in team task allocation, your role is to select the most suitable team member to initially address the task at hand. After the task is completed, the results will pass to next member.
+As an expert in team task allocation, your role is to select the most suitable team member to initially address the task at hand, and give the subtask that need to be answered by this member. 
+After the task is completed, the results will pass to next member.
 
 ## Team
 Team Name: {group_name}
@@ -87,4 +100,4 @@ Team Rules: {group_rules}
 {user_question}
 
 Please return the result in the following JSON structure which can be parsed directly by json.loads(), no extra content:
-{{"id": <member_id>}}"""
+{{"id": <member_id>, "subtask": ""}}"""
