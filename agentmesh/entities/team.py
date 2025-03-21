@@ -1,5 +1,5 @@
 from agentmesh.common.utils import string_util
-from agentmesh.entities.agent import Agent, AGENT_DECISION_PROMPT
+from agentmesh.entities.agent import Agent
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
 from agentmesh.entities.context import TeamContext

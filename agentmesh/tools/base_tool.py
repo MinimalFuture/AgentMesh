@@ -18,21 +18,12 @@ class BaseTool:
         }
 
     def execute(self, args: dict) -> Any:
-        """Entry point for execution (keep input as pure dictionary)"""
-        # Dynamically create validation model
-        ValidationModel = create_model(
-            f"{self.name}Args",
-            **self._parse_schema()
-        )
-
         try:
-            # Perform strict parameter validation
-            validated = ValidationModel(**args)
-            return self._run(validated.dict())
+            return self.run(args)
         except Exception as e:
-            return f"Parameter error: {str(e)}"
+            print(e)
 
-    def _run(self, args: dict) -> Any:
+    def run(self, args: dict) -> Any:
         """Specific logic to be implemented by subclasses"""
         raise NotImplementedError
 

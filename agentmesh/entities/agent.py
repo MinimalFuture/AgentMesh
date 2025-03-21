@@ -1,9 +1,12 @@
+import time
+
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
 from agentmesh.entities.context import TeamContext, AgentOutput
 from agentmesh.common.utils import string_util
 from agentmesh.tools.base_tool import BaseTool
 import json
+import re
 
 
 class Agent:
@@ -26,46 +29,81 @@ class Agent:
         self.tools: list = []
         self.max_react_steps = 5     # max ReAct steps
         self.conversation_history = []
+        self.agent_history = []
 
     def add_tool(self, tool: BaseTool):
         self.tools.append(tool)
 
     def _build_tools_prompt(self) -> str:
-        """构建工具列表描述"""
+        """Build the tool list description"""
         return "\n".join([
-            f"{tool.name}: {tool.description} (参数: {tool.args_schema})"
+            f"{tool.name}: {tool.description} (parameters: {tool.args_schema})"
             for tool in self.tools
         ])
 
     def _build_initial_prompt(self) -> str:
-        """构建初始提示模板"""
+        """Build the initial prompt template"""
         tools_list = self._build_tools_prompt()
 
-        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.group_context.name} team.
+        # Get the current timestamp
+        timestamp = time.time()
+
+        # Convert the timestamp to local time
+        local_time = time.localtime(timestamp)
+
+        # Format the time
+        formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
+        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.group_context.name} team. Please answer in the same language as the user's question.
+
 Available tools:
 {tools_list}
 
-Please respond strictly in the following format:
+Please respond strictly in the following JSON format:
 {{
   "thought": "Analyze the current situation and the next action",
-  "action": "Tool name or null",
+  "action": "Tool name, must be one of available tools. The value can be null when final_answer is obtained",
   "action_input": {{parameters}},
   "final_answer": "Final answer or null"
 }}
 
 Current task context:
 Team Description: {self.group_context.description}
-User Original task: {self.group_context.user_task}
-Historical steps: {self._fetch_agents_outputs()}
-"""
+Your Sub Task: {self.subtask}
+Other agents output: {self._fetch_agents_outputs()}
+Current Time: {formatted_time}"""
+
 
     def _parse_response(self, response: str) -> dict:
-        """解析模型响应，支持多种格式"""
+        """Parse the model response, supporting multiple formats"""
         try:
-            # 优先尝试JSON解析
-            return json.loads(response)
+            response = re.sub(r'^```(?:json)?\s*\n?', '', response)
+            # Remove the ending ``` and preceding newline
+            response = re.sub(r'\n?```$', '', response)
+            # Try JSON parsing first
+            return json.loads(response.strip())
         except json.JSONDecodeError:
             pass
+        # Fallback regex parsing
+        patterns = {
+            "thought": r"Thought:\s*(.*?)\n",
+            "action": r"Action:\s*(\w+)\s*",
+            "action_input": r"Action Input:\s*(.*?)\n",
+            "final_answer": r"Final Answer:\s*(.*)"
+        }
+        parsed = {}
+        for key, pattern in patterns.items():
+            match = re.search(pattern, response, re.DOTALL)
+            if match:
+                parsed[key] = match.group(1).strip()
+
+        # Handle action input parameters
+        if "action_input" in parsed:
+            try:
+                parsed["action_input"] = json.loads(parsed["action_input"])
+            except:
+                parsed["action_input"] = {}
+        return parsed
 
     def _find_tool(self, tool_name: str):
         for tool in self.tools:
@@ -79,75 +117,79 @@ Historical steps: {self._fetch_agents_outputs()}
         model_client = ModelClient()
 
         # First model call to get the response based on user question and system prompt
-        """执行ReACT推理循环"""
+        """Execute ReACT reasoning loop"""
         model_client = ModelClient()
-        self.conversation_history = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": self._build_initial_prompt()}
-        ]
+        user_prompt = self._build_initial_prompt() + "\n\nHistorical steps:"
 
         final_answer = None
         current_step = 0
         raw_response = ""
 
         while current_step < self.max_react_steps and not final_answer:
-            # 生成模型请求
+            if self.agent_history:
+                user_prompt += f"\n{json.dumps(self.agent_history[-1], ensure_ascii=False)}"
+            messages = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+
+            # Generate model request
             request = LLMRequest(
                 model_provider="openai",
                 model=self.model,
-                messages=self.conversation_history,
+                messages=messages,
                 temperature=0,
                 max_tokens=500,
                 json_format=True
             )
 
-            # 获取模型响应
+            # Get model response
             response = model_client.llm(request)
             raw_response = response["choices"][0]["message"]["content"]
             print(f"[{self.name}] Step {current_step + 1} Response:\n{raw_response}")
 
-            # 解析响应内容
+            # Parse response content
             parsed = self._parse_response(raw_response)
 
-            # 处理最终答案
+            # Handle final answer
             if "final_answer" in parsed and parsed["final_answer"]:
                 final_answer = parsed["final_answer"]
                 break
 
-            # 处理工具调用
+            # Handle tool invocation
             if "action" in parsed and parsed["action"]:
-                # 执行工具
+                # Execute tool
                 tool: BaseTool = self._find_tool(parsed["action"])
-                observation = tool.execute(
-                    parsed.get("action_input", {})
-                )
-                # 更新对话历史
+                observation = ""
+                if tool:
+                    observation = tool.execute(parsed.get("action_input", {}))
+                    # Update conversation history
+                    parsed["Observation"] = observation
+                self.agent_history.append(parsed)
                 self.conversation_history.append({
                     "role": "assistant",
                     "content": f"Thought: {parsed.get('thought', '')}\n"
                                f"Action: {parsed['action']}\n"
                                f"Action Input: {json.dumps(parsed.get('action_input', {}))}"
                 })
-
-                self.conversation_history.append({
-                    "role": "user",
-                    "content": f"Observation: {observation}"
-                })
+                if observation:
+                    self.conversation_history.append({
+                        "role": "user",
+                        "content": f"Observation: {observation}"
+                    })
             else:
-                # 没有动作则结束循环
+                # No action, end loop
+                print(f"[End] No action")
                 break
 
             current_step += 1
 
-        # 保存最终结果
+        # Save final result
         result = final_answer if final_answer else raw_response
         self.group_context.agent_outputs.append(
             AgentOutput(agent_name=self.name, output=result)
         )
         print(f"[{self.name}] Final Output: {result}")
-        print(f"{self.name} agent reply: {result}")
-        
-        self.group_context.agent_outputs.append(AgentOutput(agent_name=self.name, output=result))
 
         # Logic to decide if another agent is needed
         self.should_invoke_next_agent()
@@ -225,7 +267,7 @@ Your Subtask:
 
 
 AGENT_DECISION_PROMPT = """## Role
-You are an team decision expert, Please decision whether the next member in team is needed to complete the user task. If necessary, select the most suitable member and give the subtask that need to be answered by this member, If not, return {{"id": -1}} directly. 
+You are a team decision expert, please decide whether the next member in the team is needed to complete the user task. If necessary, select the most suitable member and give the subtask that needs to be answered by this member. If not, return {{"id": -1}} directly.
 
 ## Team
 Team Name: {group_name}
