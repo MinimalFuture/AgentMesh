@@ -1,8 +1,8 @@
 from agentmesh.common.utils import string_util
-from agentmesh.entities.agent import Agent
+from agentmesh.protocal.agent import Agent
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
-from agentmesh.entities.context import TeamContext
+from agentmesh.protocal.context import TeamContext
 
 
 class AgentTeam:
@@ -26,7 +26,7 @@ class AgentTeam:
 
         :param agent: The agent to be added.
         """
-        agent.group_context = self.context  # Pass the group context to the agent
+        agent.team_context = self.context  # Pass the group context to the agent
         self.agents.append(agent)
 
     def run(self, task: str):

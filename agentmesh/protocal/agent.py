@@ -2,7 +2,7 @@ import time
 
 from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
-from agentmesh.entities.context import TeamContext, AgentOutput
+from agentmesh.protocal.context import TeamContext, AgentOutput
 from agentmesh.common.utils import string_util
 from agentmesh.tools.base_tool import BaseTool
 import json
@@ -10,7 +10,7 @@ import re
 
 
 class Agent:
-    def __init__(self, name: str, system_prompt: str, model: str, description: str, group_context=None):
+    def __init__(self, name: str, system_prompt: str, model: str, description: str, team_context=None):
         """
         Initialize the Agent with a name, system prompt, model, description, and optional group context.
 
@@ -18,18 +18,18 @@ class Agent:
         :param system_prompt: The system prompt for the agent.
         :param model: The model used by the agent.
         :param description: A description of the agent.
-        :param group_context: Optional reference to the group context.
+        :param team_context: Optional reference to the group context.
         """
         self.name = name
         self.system_prompt = system_prompt
         self.model = model
         self.description = description
-        self.group_context: TeamContext = group_context  # Store reference to group context if provided
+        self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
         self.tools: list = []
         self.max_react_steps = 5     # max ReAct steps
         self.conversation_history = []
-        self.agent_history = []
+        self.action_history = []
 
     def add_tool(self, tool: BaseTool):
         self.tools.append(tool)
@@ -41,7 +41,7 @@ class Agent:
             for tool in self.tools
         ])
 
-    def _build_initial_prompt(self) -> str:
+    def _build_react_prompt(self) -> str:
         """Build the initial prompt template"""
         tools_list = self._build_tools_prompt()
 
@@ -54,7 +54,7 @@ class Agent:
         # Format the time
         formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
 
-        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.group_context.name} team. Please answer in the same language as the user's question.
+        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.team_context.name} team. Please answer in the same language as the user's question.
 
 Available tools:
 {tools_list}
@@ -67,7 +67,8 @@ Please respond strictly in the following format:
 <final_answer> The final answer should be as detailed and rich as possible. If there is no final answer, do not show this label </final_answer>
 
 Current task context:
-Team Description: {self.group_context.description}
+Team Description: {self.team_context.description}
+User Origin Task: {self.team_context.user_task}
 Your Sub Task: {self.subtask}
 Other agents output: {self._fetch_agents_outputs()}
 Current Time: {formatted_time}"""
@@ -82,7 +83,7 @@ Current Time: {formatted_time}"""
         Execute the agent's task by querying the model and deciding on the next steps.
         """
         model_client = ModelClient()
-        user_prompt = self._build_initial_prompt() + "\n\nHistorical steps:"
+        user_prompt = self._build_react_prompt() + "\n\nHistorical steps:"
 
         final_answer = None
         current_step = 0
@@ -92,8 +93,8 @@ Current Time: {formatted_time}"""
         print(f"\n🤖 {self.name}: {self.subtask}")
 
         while current_step < self.max_react_steps and not final_answer:
-            if self.agent_history:
-                user_prompt += f"\n{json.dumps(self.agent_history[-1], ensure_ascii=False)}"
+            if self.action_history:
+                user_prompt += f"\n{json.dumps(self.action_history[-1], ensure_ascii=False)}"
             messages = [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -151,7 +152,7 @@ Current Time: {formatted_time}"""
                     observation = tool.execute(parsed.get("action_input", {}))
                     # Update conversation history
                     parsed["Observation"] = observation
-                self.agent_history.append(parsed)
+                self.action_history.append(parsed)
                 self.conversation_history.append({
                     "role": "assistant",
                     "content": f"Thought: {parsed.get('thought', '')}\n"
@@ -172,7 +173,7 @@ Current Time: {formatted_time}"""
 
         # Save final result
         result = final_answer if final_answer else raw_response
-        self.group_context.agent_outputs.append(
+        self.team_context.agent_outputs.append(
             AgentOutput(agent_name=self.name, output=result)
         )
 
@@ -190,16 +191,16 @@ Current Time: {formatted_time}"""
         # Create a request to the model to determine if the next agent should be invoked
         agents_str = ', '.join(
             f'{{"id": {i}, "name": "{agent.name}", "description": "{agent.description}", "system_prompt": "{agent.system_prompt}"}}'
-            for i, agent in enumerate(self.group_context.agents)
+            for i, agent in enumerate(self.team_context.agents)
         )
         agent_outputs_list = self._fetch_agents_outputs()
 
-        prompt = AGENT_DECISION_PROMPT.format(group_name=self.group_context.name,
-                                              group_description=self.group_context.description,
+        prompt = AGENT_DECISION_PROMPT.format(group_name=self.team_context.name,
+                                              group_description=self.team_context.description,
                                               current_agent_name=self.name,
-                                              group_rules=self.group_context.rule,
+                                              group_rules=self.team_context.rule,
                                               agent_outputs_list=agent_outputs_list, agents_str=agents_str,
-                                              user_task=self.group_context.user_task)
+                                              user_task=self.team_context.user_task)
         # print(f"\n[Think] {self.name} is thinking about next steps...")
         request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
                              messages=[{"role": "user", "content": prompt}],
@@ -215,7 +216,7 @@ Current Time: {formatted_time}"""
             subtask = decision_res.get("subtask")
             if int(selected_agent_id) < 0:
                 return True
-            selected_agent: Agent = self.group_context.agents[selected_agent_id]
+            selected_agent: Agent = self.team_context.agents[selected_agent_id]
             selected_agent.subtask = subtask
             print()
             selected_agent.step()
@@ -225,7 +226,7 @@ Current Time: {formatted_time}"""
 
     def _fetch_agents_outputs(self) -> str:
         agent_outputs_list = []
-        for agent_output in self.group_context.agent_outputs:
+        for agent_output in self.team_context.agent_outputs:
             agent_outputs_list.append(
                 f"member name: {agent_output.agent_name}\noutput content: {agent_output.output}\n\n")
         return "\n".join(agent_outputs_list)
