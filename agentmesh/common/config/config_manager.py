@@ -1,6 +1,5 @@
-import yaml  # Import the yaml library
+import yaml
 import os
-import json
 
 global_config = {}
 
@@ -12,7 +11,6 @@ def load_config():
     with open(config_path, 'r') as file:  
         # Load the YAML content into global_config
         global_config = yaml.safe_load(file)
-        print(json.dumps(global_config))
 
 
 def config():

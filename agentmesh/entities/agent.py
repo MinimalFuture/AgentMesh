@@ -59,51 +59,18 @@ class Agent:
 Available tools:
 {tools_list}
 
-Please respond strictly in the following JSON format:
-{{
-  "thought": "Analyze the current situation and the next action",
-  "action": "Tool name, must be one of available tools. The value can be null when final_answer is obtained",
-  "action_input": {{parameters}},
-  "final_answer": "Final answer or null"
-}}
+Please respond strictly in the following format:
+
+<thought> Analyze the current situation and the next action </thought>
+<action> Tool name, must be one of available tools. The value can be null when final_answer is obtained </action>
+<action_input> Tool parameters </action_input>
+<final_answer> The final answer should be as detailed and rich as possible. If there is no final answer, do not show this label </final_answer>
 
 Current task context:
 Team Description: {self.group_context.description}
 Your Sub Task: {self.subtask}
 Other agents output: {self._fetch_agents_outputs()}
 Current Time: {formatted_time}"""
-
-
-    def _parse_response(self, response: str) -> dict:
-        """Parse the model response, supporting multiple formats"""
-        try:
-            response = re.sub(r'^```(?:json)?\s*\n?', '', response)
-            # Remove the ending ``` and preceding newline
-            response = re.sub(r'\n?```$', '', response)
-            # Try JSON parsing first
-            return json.loads(response.strip())
-        except json.JSONDecodeError:
-            pass
-        # Fallback regex parsing
-        patterns = {
-            "thought": r"Thought:\s*(.*?)\n",
-            "action": r"Action:\s*(\w+)\s*",
-            "action_input": r"Action Input:\s*(.*?)\n",
-            "final_answer": r"Final Answer:\s*(.*)"
-        }
-        parsed = {}
-        for key, pattern in patterns.items():
-            match = re.search(pattern, response, re.DOTALL)
-            if match:
-                parsed[key] = match.group(1).strip()
-
-        # Handle action input parameters
-        if "action_input" in parsed:
-            try:
-                parsed["action_input"] = json.loads(parsed["action_input"])
-            except:
-                parsed["action_input"] = {}
-        return parsed
 
     def _find_tool(self, tool_name: str):
         for tool in self.tools:
@@ -115,15 +82,14 @@ Current Time: {formatted_time}"""
         Execute the agent's task by querying the model and deciding on the next steps.
         """
         model_client = ModelClient()
-
-        # First model call to get the response based on user question and system prompt
-        """Execute ReACT reasoning loop"""
-        model_client = ModelClient()
         user_prompt = self._build_initial_prompt() + "\n\nHistorical steps:"
 
         final_answer = None
         current_step = 0
         raw_response = ""
+
+        # Print agent name and subtask
+        print(f"\n🤖 {self.name}: {self.subtask}")
 
         while current_step < self.max_react_steps and not final_answer:
             if self.agent_history:
@@ -140,24 +106,44 @@ Current Time: {formatted_time}"""
                 messages=messages,
                 temperature=0,
                 max_tokens=500,
-                json_format=True
+                json_format=False,
+                stream=True
             )
 
             # Get model response
-            response = model_client.llm(request)
-            raw_response = response["choices"][0]["message"]["content"]
-            print(f"[{self.name}] Step {current_step + 1} Response:\n{raw_response}")
+            stream_response = model_client.llm_stream(request)
+            from agentmesh.common.utils.xml_util import XmlResParser
+            parser = XmlResParser()
+            raw_response = ""
 
-            # Parse response content
-            parsed = self._parse_response(raw_response)
+            # Create element display area
+            print(f"\nStep {current_step + 1}:")
+
+            for chunk in stream_response:
+                # Ensure chunk is in the correct format
+                if isinstance(chunk, dict):
+                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                        delta = chunk["choices"][0].get("delta", {})
+                        if "content" in delta:
+                            content = delta["content"]
+                            raw_response += content
+                            # Use parser to process each streaming content chunk
+                            parser.process_chunk(content)
+                else:
+                    # If chunk is a string, process it directly
+                    raw_response += chunk
+                    parser.process_chunk(chunk)
+
+            # Get parsing results
+            parsed = parser.get_parsed_data()
 
             # Handle final answer
-            if "final_answer" in parsed and parsed["final_answer"]:
+            if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() != "null":
                 final_answer = parsed["final_answer"]
                 break
 
             # Handle tool invocation
-            if "action" in parsed and parsed["action"]:
+            if "action" in parsed and parsed["action"] and parsed["action"].lower() != "null":
                 # Execute tool
                 tool: BaseTool = self._find_tool(parsed["action"])
                 observation = ""
@@ -173,13 +159,13 @@ Current Time: {formatted_time}"""
                                f"Action Input: {json.dumps(parsed.get('action_input', {}))}"
                 })
                 if observation:
+                    # print(f"\n📊 Observation: {observation}")
                     self.conversation_history.append({
                         "role": "user",
                         "content": f"Observation: {observation}"
                     })
             else:
                 # No action, end loop
-                print(f"[End] No action")
                 break
 
             current_step += 1
@@ -189,9 +175,8 @@ Current Time: {formatted_time}"""
         self.group_context.agent_outputs.append(
             AgentOutput(agent_name=self.name, output=result)
         )
-        print(f"[{self.name}] Final Output: {result}")
 
-        # Logic to decide if another agent is needed
+        # Decide whether to invoke another agent
         self.should_invoke_next_agent()
 
     def should_invoke_next_agent(self) -> bool:
@@ -215,7 +200,7 @@ Current Time: {formatted_time}"""
                                               group_rules=self.group_context.rule,
                                               agent_outputs_list=agent_outputs_list, agents_str=agents_str,
                                               user_task=self.group_context.user_task)
-        print(f"[Think] {self.name} start think...")
+        # print(f"\n[Think] {self.name} is thinking about next steps...")
         request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
                              messages=[{"role": "user", "content": prompt}],
                              temperature=0,
@@ -229,15 +214,13 @@ Current Time: {formatted_time}"""
             selected_agent_id = string_util.json_loads(decision_text).get("id")
             subtask = decision_res.get("subtask")
             if int(selected_agent_id) < 0:
-                print("[END] User Task Finished")
                 return True
             selected_agent: Agent = self.group_context.agents[selected_agent_id]
             selected_agent.subtask = subtask
-            print(f"[Think] next agent: {selected_agent.name}, subtask: {subtask}")
+            print()
             selected_agent.step()
         except Exception as e:
-            pass
-        # Implement your logic to decide if another agent is needed based on the model's decision
+            print(f"\n[Error] Failed to determine next agent: {e}")
         return True
 
     def _fetch_agents_outputs(self) -> str:

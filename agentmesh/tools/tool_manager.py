@@ -9,7 +9,7 @@ class ToolManager:
         self.tools: Dict[str, BaseTool] = {}
     
     def load_tools(self, tools_dir: str = "agentmesh/tools"):
-        # 动态加载工具目录
+        # Dynamically load tools from directory
         tools_path = Path(tools_dir)
         for py_file in tools_path.rglob("*.py"):  # Use rglob to recursively find .py files
             if py_file.name in ["__init__.py", "base_tool.py", "tool_manager.py"]:

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import requests
+import json
 
 
 class LLMRequest:
@@ -8,14 +9,17 @@ class LLMRequest:
     for making a call to the model.
     """
     def __init__(self, model_provider: str, model: str, messages: list,
-                 temperature=0.7, max_tokens=150, json_format=False):
+                 temperature=0.7, max_tokens=150, json_format=False, stream=False):
         """
         Initialize the BaseRequest with the necessary fields.
 
+        :param model_provider: The provider of the model (e.g., 'openai').
         :param model: The name of the model to be used.
         :param messages: A list of messages to be sent to the model.
         :param temperature: The sampling temperature for the model.
         :param max_tokens: The maximum number of tokens to generate.
+        :param json_format: Whether to request JSON formatted response.
+        :param stream: Whether to enable streaming for the response.
         """
         self.model_provider = model_provider
         self.model = model
@@ -23,6 +27,7 @@ class LLMRequest:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.json_format = json_format
+        self.stream = stream
 
 
 class LLMModel:
@@ -63,3 +68,48 @@ class LLMModel:
             return response.json()
         except Exception as e:
             print(e)
+
+    def call_stream(self, request: LLMRequest):
+        """
+        Call the OpenAI API with streaming enabled.
+
+        :param request: An instance of LLMRequest containing parameters for the API call.
+        :return: A generator yielding chunks of the response from the OpenAI API.
+        """
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "model": request.model,
+            "messages": request.messages,
+            "temperature": request.temperature,
+            "max_tokens": request.max_tokens,
+            "stream": True  # 启用流式输出
+        }
+        if request.json_format:
+            data["response_format"] = {"type": "json_object"}
+
+        try:
+            response = requests.post(
+                f"{self.api_base}/chat/completions",
+                headers=headers,
+                json=data,
+                stream=True
+            )
+
+            for line in response.iter_lines():
+                if line:
+                    line = line.decode('utf-8')
+                    if line.startswith('data: '):
+                        line = line[6:]  # 移除 'data: ' 前缀
+                        if line == '[DONE]':
+                            break
+                        try:
+                            chunk = json.loads(line)
+                            yield chunk
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as e:
+            print(f"Streaming error: {e}")

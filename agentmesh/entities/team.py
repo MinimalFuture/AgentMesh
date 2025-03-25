@@ -36,22 +36,18 @@ class AgentTeam:
         self.context.user_task = task
         model_client = ModelClient()
 
+        # 打印用户任务和团队信息
+        print(f"User Task: {task}")
+        print(f"Team {self.name} received the task and started processing ...")
+
         # Generate agents_str from the list of agents
         agents_str = ', '.join(
             f'{{"id": {i}, "name": "{agent.name}", "description": "{agent.description}", "system_prompt": "{agent.system_prompt}"}}'
             for i, agent in enumerate(self.agents)
         )
-        print(agents_str)
+
         prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description,
                                               group_rules=self.rule, agents_str=agents_str, user_question=task)
-
-        # prompt = AGENT_DECISION_PROMPT.format(group_name=self.name,
-        #                                       group_description=self.description,
-        #                                       current_agent_name=self.name,
-        #                                       group_rules=self.rule,
-        #                                       agent_outputs_list="",
-        #                                       agents_str=agents_str,
-        #                                       user_task=task)
 
         request = LLMRequest(model_provider="openai",
                              model="gpt-4o-mini",
@@ -75,13 +71,15 @@ class AgentTeam:
         # Find the selected agent based on the id
         selected_agent: Agent = self.agents[selected_agent_id]
         selected_agent.subtask = subtask
-        print(f"[Think] First Agent: {selected_agent.name}, subtask: {subtask}")
         
         if selected_agent:
             # Call the selected agent's step method
             selected_agent.step()
         else:
             print("No agent found with the selected id.")
+
+        # 打印任务完成信息
+        print(f"\nTeam {self.name} completed the task")
 
 
 GROUP_DECISION_PROMPT = """## Role
