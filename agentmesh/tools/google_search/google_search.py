@@ -1,4 +1,5 @@
 import requests
+
 from agentmesh.tools.base_tool import BaseTool
 
 
@@ -25,8 +26,16 @@ class GoogleSearch(BaseTool):
             "Content-Type": "application/json"
         }
         data = {
-            "q": args["query"]
+            "q": args.get("query"),
+            "k": 10
         }
-        
+
         response = requests.post(url, headers=headers, json=data)
-        return response.json().get("organic")  # Return the JSON response from the API
+        result = response.json()
+
+        # Check if the returned result contains the 'organic' key and ensure it is a list
+        if 'organic' in result and isinstance(result.get('organic'), list):
+            return result['organic']
+        else:
+            # If there are no organic results, return the full response or an empty list
+            return result.get('organic', []) if isinstance(result.get('organic'), list) else []

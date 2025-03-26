@@ -64,7 +64,7 @@ Please respond strictly in the following format:
 
 <thought> Analyze the current situation and the next action </thought>
 <action> Tool name, must be one of available tools. The value can be null when final_answer is obtained </action>
-<action_input> Tool parameters </action_input>
+<action_input> Tool parameters in JSON format </action_input>
 <final_answer> The final answer should be as detailed and rich as possible. If there is no final answer, do not show this label </final_answer>
 
 Attention:
@@ -95,7 +95,7 @@ Your sub task: {self.subtask}"""
         raw_response = ""
 
         # Print agent name and subtask
-        print(f"🤖 {self.name}: {self.subtask}")
+        print(f"🤖 {self.name.strip()}: {self.subtask}")
 
         while current_step < self.max_react_steps and not final_answer:
             if self.action_history:

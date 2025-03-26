@@ -37,7 +37,7 @@ class AgentTeam:
         self.context.user_task = task
         model_client = ModelClient()
 
-        # 打印用户任务和团队信息
+        # Print user task and team information
         print(f"User Task: {task}")
         print(f"Team {self.name} received the task and started processing")
         print()
@@ -70,7 +70,6 @@ class AgentTeam:
 
         # Stop loading animation
         loading.stop()
-        print()
 
         reply_text = response["choices"][0]["message"]["content"]
 
@@ -89,8 +88,8 @@ class AgentTeam:
         else:
             print("No agent found with the selected id.")
 
-        # 打印任务完成信息
-        print(f"\nTeam {self.name} completed the task")
+        # Print task completion information
+        print(f"Team {self.name} completed the task")
 
 
 GROUP_DECISION_PROMPT = """## Role
