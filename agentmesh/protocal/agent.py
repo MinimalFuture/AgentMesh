@@ -1,12 +1,13 @@
+import json
 import time
 
-from agentmesh.models.model_client import ModelClient
-from agentmesh.models import LLMRequest
-from agentmesh.protocal.context import TeamContext, AgentOutput
+from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
+from agentmesh.common.utils.xml_util import XmlResParser
+from agentmesh.models import LLMRequest
+from agentmesh.models.model_client import ModelClient
+from agentmesh.protocal.context import TeamContext, AgentOutput
 from agentmesh.tools.base_tool import BaseTool
-import json
-import re
 
 
 class Agent:
@@ -27,7 +28,7 @@ class Agent:
         self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
         self.tools: list = []
-        self.max_react_steps = 5     # max ReAct steps
+        self.max_react_steps = 5  # max ReAct steps
         self.conversation_history = []
         self.action_history = []
 
@@ -54,7 +55,7 @@ class Agent:
         # Format the time
         formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
 
-        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.team_context.name} team. Please answer in the same language as the user's question.
+        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.team_context.name} team. Please answer in the same language as the user's original task.
 
 Available tools:
 {tools_list}
@@ -66,12 +67,16 @@ Please respond strictly in the following format:
 <action_input> Tool parameters </action_input>
 <final_answer> The final answer should be as detailed and rich as possible. If there is no final answer, do not show this label </final_answer>
 
+Attention:
+The content of thought and final_answer needs to be consistent with the language used by the user original task.
+
 Current task context:
-Team Description: {self.team_context.description}
-User Origin Task: {self.team_context.user_task}
-Your Sub Task: {self.subtask}
+Current time: {formatted_time}
+Team description: {self.team_context.description}
 Other agents output: {self._fetch_agents_outputs()}
-Current Time: {formatted_time}"""
+
+User origin task: {self.team_context.user_task}
+Your sub task: {self.subtask}"""
 
     def _find_tool(self, tool_name: str):
         for tool in self.tools:
@@ -90,7 +95,7 @@ Current Time: {formatted_time}"""
         raw_response = ""
 
         # Print agent name and subtask
-        print(f"\n🤖 {self.name}: {self.subtask}")
+        print(f"🤖 {self.name}: {self.subtask}")
 
         while current_step < self.max_react_steps and not final_answer:
             if self.action_history:
@@ -111,16 +116,24 @@ Current Time: {formatted_time}"""
                 stream=True
             )
 
+            # Start loading animation before getting model response
+            print()
+            loading = LoadingIndicator(message="Thinking...", animation_type="spinner")
+            loading.start()
+
             # Get model response
             stream_response = model_client.llm_stream(request)
-            from agentmesh.common.utils.xml_util import XmlResParser
             parser = XmlResParser()
             raw_response = ""
-
             # Create element display area
-            print(f"\nStep {current_step + 1}:")
 
+            first_token = True
             for chunk in stream_response:
+                if first_token:
+                    first_token = False
+                    loading.stop()
+                    print(f"Step {current_step + 1}:")
+
                 # Ensure chunk is in the correct format
                 if isinstance(chunk, dict):
                     if "choices" in chunk and len(chunk["choices"]) > 0:
@@ -201,7 +214,12 @@ Current Time: {formatted_time}"""
                                               group_rules=self.team_context.rule,
                                               agent_outputs_list=agent_outputs_list, agents_str=agents_str,
                                               user_task=self.team_context.user_task)
-        # print(f"\n[Think] {self.name} is thinking about next steps...")
+
+        # Start loading animation
+        print()
+        loading = LoadingIndicator(message="Select agent in team...", animation_type="spinner")
+        loading.start()
+
         request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
                              messages=[{"role": "user", "content": prompt}],
                              temperature=0,
@@ -209,6 +227,11 @@ Current Time: {formatted_time}"""
                              json_format=True)
 
         response = model_client.llm(request)
+
+        # Stop loading animation
+        loading.stop()
+        print()
+
         decision_text = response["choices"][0]["message"]["content"]
         try:
             decision_res = string_util.json_loads(decision_text)
@@ -248,7 +271,6 @@ User Original Task:
 
 Your Subtask:
 {subtask}"""
-
 
 AGENT_DECISION_PROMPT = """## Role
 You are a team decision expert, please decide whether the next member in the team is needed to complete the user task. If necessary, select the most suitable member and give the subtask that needs to be answered by this member. If not, return {{"id": -1}} directly.

@@ -1,7 +1,8 @@
+from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
-from agentmesh.protocal.agent import Agent
-from agentmesh.models.model_client import ModelClient
 from agentmesh.models import LLMRequest
+from agentmesh.models.model_client import ModelClient
+from agentmesh.protocal.agent import Agent
 from agentmesh.protocal.context import TeamContext
 
 
@@ -38,7 +39,8 @@ class AgentTeam:
 
         # 打印用户任务和团队信息
         print(f"User Task: {task}")
-        print(f"Team {self.name} received the task and started processing ...")
+        print(f"Team {self.name} received the task and started processing")
+        print()
 
         # Generate agents_str from the list of agents
         agents_str = ', '.join(
@@ -48,6 +50,10 @@ class AgentTeam:
 
         prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description,
                                               group_rules=self.rule, agents_str=agents_str, user_question=task)
+
+        # Start loading animation
+        loading = LoadingIndicator(message="Select an agent in the team...", animation_type="spinner")
+        loading.start()
 
         request = LLMRequest(model_provider="openai",
                              model="gpt-4o-mini",
@@ -61,6 +67,11 @@ class AgentTeam:
 
         # Get the model instance and decide which agent to use
         response = model_client.llm(request)
+
+        # Stop loading animation
+        loading.stop()
+        print()
+
         reply_text = response["choices"][0]["message"]["content"]
 
         # Parse the response to get the selected agent's id
@@ -71,7 +82,7 @@ class AgentTeam:
         # Find the selected agent based on the id
         selected_agent: Agent = self.agents[selected_agent_id]
         selected_agent.subtask = subtask
-        
+
         if selected_agent:
             # Call the selected agent's step method
             selected_agent.step()
