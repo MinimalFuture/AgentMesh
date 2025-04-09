@@ -1,7 +1,122 @@
-from agentmesh.common import load_config
+import argparse
+import sys
+from agentmesh.common import load_config, config
 from agentmesh.tools.tool_manager import ToolManager
+from agentmesh.protocal import AgentTeam, Agent
+from agentmesh.models.model_client import ModelClient
+
+
+def create_team_from_config(team_name):
+    """Create a team from configuration."""
+    # Get teams configuration
+    teams_config = config().get("teams", {})
+    
+    # Check if the specified team exists
+    if team_name not in teams_config:
+        print(f"Error: Team '{team_name}' not found in configuration.")
+        available_teams = list(teams_config.keys())
+        print(f"Available teams: {', '.join(available_teams)}")
+        return None
+    
+    # Get team configuration
+    team_config = teams_config[team_name]
+    
+    # Create team
+    team = AgentTeam(
+        name=team_name,
+        description=team_config.get("description", ""),
+        rule=team_config.get("rule", "")
+    )
+    
+    # Create and add agents to the team
+    agents_config = team_config.get("agents", [])
+    for agent_config in agents_config:
+        agent = Agent(
+            name=agent_config.get("name", ""),
+            system_prompt=agent_config.get("system_prompt", ""),
+            model=agent_config.get("model", "gpt-4o"),
+            description=agent_config.get("description", "")
+        )
+        
+        # Add tools to the agent if specified
+        tool_names = agent_config.get("tools", [])
+        tool_manager = ToolManager()
+        for tool_name in tool_names:
+            tool = tool_manager.get_tool(tool_name)
+            if tool:
+                agent.add_tool(tool)
+            else:
+                print(f"Warning: Tool '{tool_name}' not found for agent '{agent.name}'")
+        
+        # Add agent to team
+        team.add(agent)
+    
+    return team
+
+
+def list_available_teams():
+    """List all available teams from configuration."""
+    teams_config = config().get("teams", {})
+    if not teams_config:
+        print("No teams found in configuration.")
+        return
+    
+    print("Available teams:")
+    for team_name, team_config in teams_config.items():
+        print(f"  - {team_name}: {team_config.get('description', '')}")
+
+
+def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="AgentMesh - Interactive Multi-Agent Framework")
+    parser.add_argument("-t", "--team", help="Specify the team to run")
+    parser.add_argument("-l", "--list", action="store_true", help="List available teams")
+    args = parser.parse_args()
+    
+    # Load configuration
+    load_config()
+    
+    # Load tools
+    ToolManager().load_tools()
+    
+    # List teams if requested
+    if args.list:
+        list_available_teams()
+        return
+    
+    # If no team is specified, show usage
+    if not args.team:
+        parser.print_help()
+        return
+    
+    # Create team from configuration
+    team = create_team_from_config(args.team)
+    if not team:
+        return
+    
+    print(f"Team '{team.name}' loaded successfully.")
+    print(f"Description: {team.description}")
+    print(f"Number of agents: {len(team.agents)}")
+    print("\nEnter your task (type 'exit' to quit):")
+    
+    # Interactive loop
+    while True:
+        try:
+            user_input = input("> ")
+            if user_input.lower() in ["exit", "quit", "q"]:
+                print("Exiting AgentMesh. Goodbye!")
+                break
+            
+            if user_input.strip():
+                # Run the team with the user's task
+                team.run(user_input)
+                print("\nEnter your next task (type 'exit' to quit):")
+        except KeyboardInterrupt:
+            print("\nExiting AgentMesh. Goodbye!")
+            break
+        except Exception as e:
+            print(f"Error: {e}")
 
 
 if __name__ == "__main__":
-    load_config()
-    ToolManager().load_tools()
+    main()
