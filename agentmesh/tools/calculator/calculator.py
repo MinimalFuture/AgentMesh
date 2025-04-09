@@ -1,11 +1,12 @@
 import math
-from agentmesh.tools.base_tool import BaseTool
+
+from agentmesh.tools.base_tool import BaseTool, ToolResult
 
 
 class Calculator(BaseTool):
     name: str = "calculator"
     description: str = "A tool to perform basic mathematical calculations."
-    args_schema: dict = {
+    params: dict = {
         "type": "object",
         "properties": {
             "expression": {
@@ -18,11 +19,11 @@ class Calculator(BaseTool):
     }
     config: dict = {}
 
-    def run(self, args: dict) -> dict:
+    def execute(self, args: dict) -> ToolResult:
         try:
             # Get the expression
             expression = args["expression"]
-            
+
             # Create a safe local environment containing only basic math functions
             safe_locals = {
                 "abs": abs,
@@ -42,16 +43,16 @@ class Calculator(BaseTool):
                 "floor": math.floor,
                 "ceil": math.ceil
             }
-            
+
             # Safely evaluate the expression
             result = eval(expression, {"__builtins__": {}}, safe_locals)
-            
-            return {
+
+            return ToolResult.success({
                 "result": result,
                 "expression": expression
-            }
+            })
         except Exception as e:
-            return {
+            return ToolResult.success({
                 "error": str(e),
                 "expression": args.get("expression", "")
-            }
+            })

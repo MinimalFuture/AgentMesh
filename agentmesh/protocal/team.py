@@ -62,7 +62,6 @@ class AgentTeam:
                                  "content": prompt
                              }],
                              temperature=0,
-                             max_tokens=150,
                              json_format=True)
 
         # Get the model instance and decide which agent to use

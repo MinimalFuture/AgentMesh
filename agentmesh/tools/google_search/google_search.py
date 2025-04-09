@@ -1,12 +1,12 @@
 import requests
 
-from agentmesh.tools.base_tool import BaseTool
+from agentmesh.tools.base_tool import BaseTool, ToolResult
 
 
 class GoogleSearch(BaseTool):
     name: str = "google_search"
     description: str = "A tool to perform Google searches using the Serper API."
-    args_schema: dict = {
+    params: dict = {
         "type": "object",
         "properties": {
             "query": {
@@ -18,7 +18,7 @@ class GoogleSearch(BaseTool):
     }
     config: dict = {}
 
-    def run(self, args: dict) -> dict:
+    def execute(self, args: dict) -> ToolResult:
         api_key = self.config.get("api_key")  # Replace with your actual API key
         url = "https://google.serper.dev/search"
         headers = {
@@ -35,7 +35,8 @@ class GoogleSearch(BaseTool):
 
         # Check if the returned result contains the 'organic' key and ensure it is a list
         if 'organic' in result and isinstance(result.get('organic'), list):
-            return result['organic']
+            result_data = result['organic']
         else:
             # If there are no organic results, return the full response or an empty list
-            return result.get('organic', []) if isinstance(result.get('organic'), list) else []
+            result_data = result.get('organic', []) if isinstance(result.get('organic'), list) else []
+        return ToolResult.success(result=result_data)

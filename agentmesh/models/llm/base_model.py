@@ -9,7 +9,7 @@ class LLMRequest:
     for making a call to the model.
     """
     def __init__(self, model_provider: str, model: str, messages: list,
-                 temperature=0.7, max_tokens=150, json_format=False, stream=False):
+                 temperature=0.7, max_tokens=8192, json_format=False, stream=False):
         """
         Initialize the BaseRequest with the necessary fields.
 
@@ -86,7 +86,7 @@ class LLMModel:
             "messages": request.messages,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
-            "stream": True  # 启用流式输出
+            "stream": True  # Enable streaming
         }
         if request.json_format:
             data["response_format"] = {"type": "json_object"}
@@ -103,7 +103,7 @@ class LLMModel:
                 if line:
                     line = line.decode('utf-8')
                     if line.startswith('data: '):
-                        line = line[6:]  # 移除 'data: ' 前缀
+                        line = line[6:]  # Remove 'data: ' prefix
                         if line == '[DONE]':
                             break
                         try:

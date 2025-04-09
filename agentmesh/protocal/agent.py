@@ -28,9 +28,10 @@ class Agent:
         self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
         self.tools: list = []
-        self.max_react_steps = 5  # max ReAct steps
+        self.max_react_steps = 20  # max ReAct steps
         self.conversation_history = []
         self.action_history = []
+        self.ext_data = ""
 
     def add_tool(self, tool: BaseTool):
         self.tools.append(tool)
@@ -38,7 +39,7 @@ class Agent:
     def _build_tools_prompt(self) -> str:
         """Build the tool list description"""
         return "\n".join([
-            f"{tool.name}: {tool.description} (parameters: {tool.args_schema})"
+            f"{tool.name}: {tool.description} (parameters: {tool.params})"
             for tool in self.tools
         ])
 
@@ -54,29 +55,35 @@ class Agent:
 
         # Format the time
         formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+        ext_data_prompt = self.ext_data
 
-        return f"""You are handling the subtask: {self.subtask}, as a member of the {self.team_context.name} team. Please answer in the same language as the user's original task.
+        tools_prompt = f"""## Role
+You are handling the subtask: {self.subtask}, as a member of the {self.team_context.name} team. Please answer in the same language as the user's original task.
 
-Available tools:
+## Available tools
 {tools_list}
 
+## Reply format 
 Please respond strictly in the following format:
-
 <thought> Analyze the current situation and the next action </thought>
 <action> Tool name, must be one of available tools. The value can be null when final_answer is obtained </action>
 <action_input> Tool parameters in JSON format </action_input>
 <final_answer> The final answer should be as detailed and rich as possible. If there is no final answer, do not show this label </final_answer>
 
-Attention:
+## Attention
 The content of thought and final_answer needs to be consistent with the language used by the user original task.
+"""
 
-Current task context:
+        current_task_prompt = f"""
+## Current task context:
 Current time: {formatted_time}
 Team description: {self.team_context.description}
 Other agents output: {self._fetch_agents_outputs()}
 
 User origin task: {self.team_context.user_task}
 Your sub task: {self.subtask}"""
+
+        return tools_prompt + ext_data_prompt + current_task_prompt
 
     def _find_tool(self, tool_name: str):
         for tool in self.tools:
@@ -88,7 +95,6 @@ Your sub task: {self.subtask}"""
         Execute the agent's task by querying the model and deciding on the next steps.
         """
         model_client = ModelClient()
-        user_prompt = self._build_react_prompt() + "\n\nHistorical steps:"
 
         final_answer = None
         current_step = 0
@@ -98,8 +104,9 @@ Your sub task: {self.subtask}"""
         print(f"🤖 {self.name.strip()}: {self.subtask}")
 
         while current_step < self.max_react_steps and not final_answer:
+            user_prompt = self._build_react_prompt() + "\n\n## Historical steps:\n"
             if self.action_history:
-                user_prompt += f"\n{json.dumps(self.action_history[-1], ensure_ascii=False)}"
+                user_prompt += f"\n{json.dumps(self.action_history[-5:], ensure_ascii=False, indent=4)}"
             messages = [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -162,9 +169,14 @@ Your sub task: {self.subtask}"""
                 tool: BaseTool = self._find_tool(parsed["action"])
                 observation = ""
                 if tool:
-                    observation = tool.execute(parsed.get("action_input", {}))
+                    tool_result = tool.execute_tool(parsed.get("action_input", {}))
                     # Update conversation history
-                    parsed["Observation"] = observation
+                    parsed["Observation"] = {
+                        "status": tool_result.status,
+                        "result": tool_result.result
+                    }
+                    if tool_result.ext_data:
+                        self.ext_data = tool_result.ext_data
                 self.action_history.append(parsed)
                 self.conversation_history.append({
                     "role": "assistant",
@@ -223,7 +235,6 @@ Your sub task: {self.subtask}"""
         request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
                              messages=[{"role": "user", "content": prompt}],
                              temperature=0,
-                             max_tokens=10,
                              json_format=True)
 
         response = model_client.llm(request)

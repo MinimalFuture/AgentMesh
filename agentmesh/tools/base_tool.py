@@ -1,11 +1,26 @@
-from typing import Any
+from typing import Any, Optional
+from pydantic import BaseModel, Field
+
+
+class ToolResult(BaseModel):
+    status: str = Field(default=None)
+    result: Any = Field(default=None)
+    ext_data: Any = Field(default=None)
+
+    @staticmethod
+    def success(result, ext_data: Any = None):
+        return ToolResult(status="success", result=result, ext_data=ext_data)
+
+    @staticmethod
+    def fail(result, ext_data: Any = None):
+        return ToolResult(status="success", result=result, ext_data=ext_data)
 
 
 class BaseTool:
     # Class attributes must be inherited
     name: str = "base_tool"
     description: str = "Base tool"
-    args_schema: dict = {}  # Store JSON Schema
+    params: dict = {}  # Store JSON Schema
 
     @classmethod
     def get_json_schema(cls) -> dict:
@@ -13,16 +28,16 @@ class BaseTool:
         return {
             "name": cls.name,
             "description": cls.description,
-            "parameters": cls.args_schema
+            "parameters": cls.params
         }
 
-    def execute(self, args: dict) -> Any:
+    def execute_tool(self, params: dict) -> ToolResult:
         try:
-            return self.run(args)
+            return self.execute(params)
         except Exception as e:
             print(e)
 
-    def run(self, args: dict) -> Any:
+    def execute(self, params: dict) -> ToolResult:
         """Specific logic to be implemented by subclasses"""
         raise NotImplementedError
 
@@ -30,7 +45,7 @@ class BaseTool:
     def _parse_schema(cls) -> dict:
         """Convert JSON Schema to Pydantic fields"""
         fields = {}
-        for name, prop in cls.args_schema["properties"].items():
+        for name, prop in cls.params["properties"].items():
             # Convert JSON Schema types to Python types
             type_map = {
                 "string": str,

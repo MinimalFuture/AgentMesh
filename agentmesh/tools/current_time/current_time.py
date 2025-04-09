@@ -1,12 +1,13 @@
 import datetime
 import time
-from agentmesh.tools.base_tool import BaseTool
+
+from agentmesh.tools.base_tool import BaseTool, ToolResult
 
 
 class CurrentTime(BaseTool):
     name: str = "time"
     description: str = "A tool to get current date and time information."
-    args_schema: dict = {
+    params: dict = {
         "type": "object",
         "properties": {
             "format": {
@@ -22,19 +23,19 @@ class CurrentTime(BaseTool):
     }
     config: dict = {}
 
-    def run(self, args: dict) -> dict:
+    def execute(self, args: dict) -> ToolResult:
         try:
             # Get the format and timezone parameters, with defaults
             time_format = args.get("format", "human").lower()
             timezone = args.get("timezone", "local").lower()
-            
+
             # Get current time
             current_time = datetime.datetime.now()
-            
+
             # Handle timezone if specified
             if timezone == "utc":
                 current_time = datetime.datetime.utcnow()
-            
+
             # Format the time according to the specified format
             if time_format == "iso":
                 # ISO 8601 format
@@ -45,7 +46,7 @@ class CurrentTime(BaseTool):
             else:
                 # Human-readable format
                 formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-            
+
             # Prepare additional time components for the response
             year = current_time.year
             month = current_time.month
@@ -54,8 +55,8 @@ class CurrentTime(BaseTool):
             minute = current_time.minute
             second = current_time.second
             weekday = current_time.strftime("%A")  # Full weekday name
-            
-            return {
+
+            result = {
                 "current_time": formatted_time,
                 "components": {
                     "year": year,
@@ -69,9 +70,7 @@ class CurrentTime(BaseTool):
                 "format": time_format,
                 "timezone": timezone
             }
+            return ToolResult.success(result=result)
         except Exception as e:
             print(e)
-
-            return {
-                "error": str(e)
-            }
+            return ToolResult.fail(result=str(e))

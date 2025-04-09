@@ -1,7 +1,8 @@
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import requests
 from agentmesh.tools.base_tool import BaseTool
+
 
 class GoogleSearchTool(BaseTool):
     """Tool for performing Google searches."""
@@ -20,7 +21,7 @@ class GoogleSearchTool(BaseTool):
         self.api_key = "YOUR_API_KEY"  # Replace with your actual API key
         self.search_engine_id = "YOUR_SEARCH_ENGINE_ID"  # Replace with your actual search engine ID
     
-    def execute(self, parameters: Dict[str, Any]) -> str:
+    def execute(self, params: Dict[str, Any]) -> str:
         """
         Execute the Google search.
         
@@ -28,26 +29,26 @@ class GoogleSearchTool(BaseTool):
         :return: The search results as a string.
         """
         # Ensure parameters is a dictionary
-        if isinstance(parameters, str):
+        if isinstance(params, str):
             try:
-                parameters = json.loads(parameters)
+                params = json.loads(params)
             except json.JSONDecodeError:
                 # If it's not valid JSON, assume it's the query itself
-                parameters = {"query": parameters}
+                params = {"query": params}
         
-        query = parameters.get("query", "")
+        query = params.get("query", "")
         if not query:
             return "Error: No query provided."
         
         try:
             # Perform the search
             url = f"https://www.googleapis.com/customsearch/v1"
-            params = {
+            args = {
                 "key": self.api_key,
                 "cx": self.search_engine_id,
                 "q": query
             }
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=args)
             
             # Check if the request was successful
             if response.status_code != 200:
@@ -84,7 +85,7 @@ class GoogleSearchTool(BaseTool):
                 results.append(result)
             
             # Return the results as a formatted string
-            return json.dumps(results, ensure_ascii=False, indent=2)
+            return json.dumps(results, ensure_ascii=False, indent=4)
         
         except Exception as e:
             return f"Error performing search: {str(e)}" 
