@@ -20,6 +20,7 @@ class AgentTeam:
         self.rule = rule
         self.agents = []
         self.context = TeamContext(name, description, rule, agents=self.agents)
+        self.model = None  # Default model for the team
 
     def add(self, agent: Agent):
         """
@@ -28,6 +29,11 @@ class AgentTeam:
         :param agent: The agent to be added.
         """
         agent.team_context = self.context  # Pass the group context to the agent
+        
+        # If agent doesn't have a model specified, use the team's model
+        if not agent.model and self.model:
+            agent.model = self.model
+            
         self.agents.append(agent)
 
     def run(self, task: str):
@@ -35,6 +41,7 @@ class AgentTeam:
         Decide which agent will handle the task and execute its step method.
         """
         self.context.user_task = task
+        self.context.model = self.model  # Set the model in the context
         model_client = ModelClient()
 
         # Print user task and team information
@@ -55,14 +62,16 @@ class AgentTeam:
         loading = LoadingIndicator(message="Select an agent in the team...", animation_type="spinner")
         loading.start()
 
-        request = LLMRequest(model_provider="openai",
-                             model="gpt-4o-mini",
-                             messages=[{
-                                 "role": "user",
-                                 "content": prompt
-                             }],
-                             temperature=0,
-                             json_format=True)
+        
+        request = LLMRequest(
+            model=self.model,  # Use team's model
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }],
+            temperature=0,
+            json_format=True
+        )
 
         # Get the model instance and decide which agent to use
         response = model_client.llm(request)

@@ -3,7 +3,6 @@ import sys
 from agentmesh.common import load_config, config
 from agentmesh.tools.tool_manager import ToolManager
 from agentmesh.protocal import AgentTeam, Agent
-from agentmesh.models.model_client import ModelClient
 
 
 def create_team_from_config(team_name):
@@ -28,13 +27,16 @@ def create_team_from_config(team_name):
         rule=team_config.get("rule", "")
     )
     
+    # Set team's default model
+    team.model = team_config.get("model", "gpt-4o")
+    
     # Create and add agents to the team
     agents_config = team_config.get("agents", [])
     for agent_config in agents_config:
         agent = Agent(
             name=agent_config.get("name", ""),
             system_prompt=agent_config.get("system_prompt", ""),
-            model=agent_config.get("model", "gpt-4o"),
+            model=agent_config.get("model", ""),  # Model can be empty, will use team's model
             description=agent_config.get("description", "")
         )
         
@@ -68,7 +70,7 @@ def list_available_teams():
 
 def main():
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="AgentMesh - Interactive Multi-Agent Framework")
+    parser = argparse.ArgumentParser(description="AgentMesh - Multi-Agent Framework")
     parser.add_argument("-t", "--team", help="Specify the team to run")
     parser.add_argument("-l", "--list", action="store_true", help="List available teams")
     args = parser.parse_args()

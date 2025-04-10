@@ -11,3 +11,4 @@ config.yaml
 tests
 run_local_cases.py
 *.zip
+workspace/

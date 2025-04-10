@@ -36,7 +36,7 @@ class ToolManager:
         # Then, configure tools from config file
         self._configure_tools_from_config()
         
-        print(f"Loaded {len(self.tools)} tools: {', '.join(self.tools.keys())}")
+        # print(f"Loaded {len(self.tools)} tools: {', '.join(self.tools.keys())}")
     
     def _load_tools_from_directory(self, tools_dir: str):
         """Dynamically load tools from directory"""
@@ -48,7 +48,7 @@ class ToolManager:
             # Construct the module name based on the relative path
             plugin_name = py_file.stem
             module_name = str(py_file.relative_to(Path(tools_dir).parent)).replace("/", ".").replace(".py", "")
-            print(f"plugin_name: {plugin_name}, module_name: {module_name}")
+            # print(f"plugin_name: {plugin_name}, module_name: {module_name}")
             
             # Import using the corrected module name
             try:

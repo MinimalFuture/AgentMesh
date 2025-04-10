@@ -13,6 +13,7 @@ class TeamContext:
         self.rule = rule
         self.agents = agents
         self.user_task = ""
+        self.model = None  # Default model for the team
         # List of agents that have been executed
         self.agent_outputs: list = []
 

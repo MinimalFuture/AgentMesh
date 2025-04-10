@@ -58,6 +58,8 @@ class Agent:
         ext_data_prompt = self.ext_data
 
         tools_prompt = f"""## Role
+Your role: {self.name}
+Your role description: {self.description}
 You are handling the subtask: {self.subtask}, as a member of the {self.team_context.name} team. Please answer in the same language as the user's original task.
 
 ## Available tools
@@ -112,10 +114,12 @@ Your sub task: {self.subtask}"""
                 {"role": "user", "content": user_prompt}
             ]
 
+            # Get the model to use - use agent's model if set, otherwise use team's model
+            model_to_use = self.model if self.model else self.team_context.model
+
             # Generate model request
             request = LLMRequest(
-                model_provider="openai",
-                model=self.model,
+                model=model_to_use,
                 messages=messages,
                 temperature=0,
                 max_tokens=500,
@@ -232,7 +236,8 @@ Your sub task: {self.subtask}"""
         loading = LoadingIndicator(message="Select agent in team...", animation_type="spinner")
         loading.start()
 
-        request = LLMRequest(model_provider="openai", model="gpt-4o-mini",
+        # Use team's model for agent selection decision
+        request = LLMRequest(model=self.team_context.model,
                              messages=[{"role": "user", "content": prompt}],
                              temperature=0,
                              json_format=True)
