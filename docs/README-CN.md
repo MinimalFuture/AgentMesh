@@ -1,4 +1,4 @@
-# AgentMesh
+<p align="center"><img src= "https://github.com/user-attachments/assets/60534980-ac81-475f-9462-d2205c085028" alt="Chatgpt-on-Wechat" width="500" /></p>
 
 <a href="/README.md">English</a> | 中文
 
@@ -8,10 +8,9 @@ AgentMesh是一个 **多智能体 (Multi-agent) 平台** ，提供AI Agent开发
 
 提供三种使用方式快速构建并运行你的 Agent Team：
 
-
 ## 一、终端运行
 
-在终端中命令行中快速运行多智能体团队，要求
+在终端中命令行中快速运行多智能体团队:
 
 ### 1.安装
 

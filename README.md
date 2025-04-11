@@ -1,4 +1,4 @@
-# AgentMesh
+<p align="center"><img src= "https://github.com/user-attachments/assets/60534980-ac81-475f-9462-d2205c085028" alt="Chatgpt-on-Wechat" width="500" /></p>
 
 English | <a href="/docs/README-CN.md">中文</a>
 
@@ -12,7 +12,7 @@ There are three ways to quickly build and run your Agent Team:
 
 Run a multi-agent team in the terminal command line:
 
-### 1. Installation
+### 1.1 Installation
 
 Download the source code and enter the project directory:
 
@@ -42,7 +42,7 @@ Install dependencies:
 pip install requirements.txt
 ```
 
-### 2. Configuration
+### 1.2 Configuration
 
 The configuration file is `config.yaml` in the root directory, which includes model configuration and Agent configuration. You can copy from the template file and modify it:
 
@@ -54,7 +54,7 @@ Fill in the `api_key` for the models you need. AgentMesh supports `openai`, `cla
 
 The configuration template includes a pre-configured Agent development team called `software_team`, which consists of three roles: product manager, architect, and engineer, who can collaborate to complete software development tasks.
 
-### 3. Execution
+### 1.3 Execution
 
 Run the `software_team` example:
 
