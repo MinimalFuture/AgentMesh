@@ -1,6 +1,4 @@
-<p align="center"><img src= "https://github.com/user-attachments/assets/1499f725-0a7c-42cd-9968-a607a95af5d4" alt="Chatgpt-on-Wechat" width="450" /></p>
-
-# AgentMesh
+<p align="center"><img src= "https://github.com/user-attachments/assets/1499f725-0a7c-42cd-9968-a607a95af5d4" alt="Chatgpt-on-Wechat" width="400" /></p>
 
 English | <a href="/docs/README-CN.md">中文</a>
 
