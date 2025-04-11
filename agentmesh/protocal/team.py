@@ -94,7 +94,7 @@ class AgentTeam:
             print("No agent found with the selected id.")
 
         # Print task completion information
-        print(f"Team {self.name} completed the task")
+        print(f"\nTeam {self.name} completed the task")
 
 
 GROUP_DECISION_PROMPT = """## Role

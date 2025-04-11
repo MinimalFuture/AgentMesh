@@ -35,7 +35,7 @@ class ClaudeModel(LLMModel):
         data = {
             "model": self.model,
             "messages": claude_messages,
-            "max_tokens": request.max_tokens,
+            "max_tokens": self._get_max_tokens(),
             "temperature": request.temperature
         }
         
@@ -112,7 +112,7 @@ class ClaudeModel(LLMModel):
         data = {
             "model": self.model,
             "messages": claude_messages,
-            "max_tokens": request.max_tokens,
+            "max_tokens": self._get_max_tokens(),
             "temperature": request.temperature,
             "stream": True
         }
@@ -167,3 +167,10 @@ class ClaudeModel(LLMModel):
                             continue
         except Exception as e:
             print(f"Streaming error with Claude API: {e}")
+
+
+    def _get_max_tokens(self) -> int:
+        model = self.model
+        if model and (model.startswith("claude-3-5") or model.startswith("claude-3-7")):
+            return 8192
+        return 4096

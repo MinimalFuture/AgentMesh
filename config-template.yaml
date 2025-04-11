@@ -1,4 +1,39 @@
+# AgentMesh Config
+
+# Model config
 models:
   openai:
     api_base: "https://api.openai.com/v1"
-    api_key: "YOUR API_KEY"
+    api_key: "YOUR_API_KEY"
+
+  claude:
+    api_key: "YOUR_API_KEY"
+
+# Tool config
+tools:
+  google_search:
+    api_key: "YOUR_SERPER_API_KEY"
+
+
+# Team config
+teams:
+  software_team:
+    model: "gpt-4o"
+    description: "A software development team with product manager, architect, and developer"
+    agents:
+      - name: "Product Manager"
+        description: "Responsible for product requirements and documentation"
+        system_prompt: "You are an experienced product manager who creates clear and comprehensive PRDs. Focus on user needs, feature specifications, and acceptance criteria."
+        tools:
+          - time
+      - name: "Architect"
+        description: "Designs system architecture and selects technologies"
+        system_prompt: "You are a skilled software architect who designs robust and scalable system architectures. Provide technical specifications and architecture diagram justify your technology choices."
+        tools:
+          - calculator
+      - name: "Developer"
+        description: "Implements code based on PRD and architecture design"
+        system_prompt: "You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements and architecture guidelines precisely."
+        tools:
+          - time
+          - calculator

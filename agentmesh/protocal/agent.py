@@ -11,7 +11,8 @@ from agentmesh.tools.base_tool import BaseTool
 
 
 class Agent:
-    def __init__(self, name: str, system_prompt: str, description: str, model: LLMModel = None, team_context=None):
+    def __init__(self, name: str, system_prompt: str, description: str, model: LLMModel = None, team_context=None,
+                 tools=None):
         """
         Initialize the Agent with a name, system prompt, model, description, and optional group context.
 
@@ -32,6 +33,9 @@ class Agent:
         self.conversation_history = []
         self.action_history = []
         self.ext_data = ""
+        if tools is None:
+            tools = []
+        self.tools = tools
 
     def add_tool(self, tool: BaseTool):
         self.tools.append(tool)
@@ -119,7 +123,6 @@ Your sub task: {self.subtask}"""
             request = LLMRequest(
                 messages=messages,
                 temperature=0,
-                max_tokens=500,
                 json_format=False,
                 stream=True
             )
@@ -216,17 +219,25 @@ Your sub task: {self.subtask}"""
         model_to_use = self.team_context.model
 
         # Create a request to the model to determine if the next agent should be invoked
+        # Exclude the current agent from the list to prevent self-recursion
         agents_str = ', '.join(
             f'{{"id": {i}, "name": "{agent.name}", "description": "{agent.description}", "system_prompt": "{agent.system_prompt}"}}'
             for i, agent in enumerate(self.team_context.agents)
+            if agent.name != self.name  # Exclude current agent
         )
+        
+        # If no other agents are available, return False
+        if not agents_str:
+            return False
+        
         agent_outputs_list = self._fetch_agents_outputs()
 
         prompt = AGENT_DECISION_PROMPT.format(group_name=self.team_context.name,
                                               group_description=self.team_context.description,
                                               current_agent_name=self.name,
                                               group_rules=self.team_context.rule,
-                                              agent_outputs_list=agent_outputs_list, agents_str=agents_str,
+                                              agent_outputs_list=agent_outputs_list, 
+                                              agents_str=agents_str,
                                               user_task=self.team_context.user_task)
 
         # Start loading animation
@@ -259,13 +270,18 @@ Your sub task: {self.subtask}"""
             # Get subtask
             subtask = decision_res.get("subtask", "")
             
-            # Prevent self-recursion - don't allow an agent to call itself
-            if int(selected_agent_id) >= 0 and int(selected_agent_id) < len(self.team_context.agents):
-                selected_agent = self.team_context.agents[int(selected_agent_id)]
-                # Check if the selected agent is the current agent
-                if selected_agent.name == self.name:
-                    print(f"\n[Warning] Agent '{self.name}' attempted to call itself. Stopping chain.")
-                    return False
+            # Create a mapping from original indices to new indices (excluding current agent)
+            agent_mapping = {}
+            new_idx = 0
+            for i, agent in enumerate(self.team_context.agents):
+                if agent.name != self.name:
+                    agent_mapping[new_idx] = i
+                    new_idx += 1
+            
+            # Map the selected agent ID to the actual agent ID
+            if int(selected_agent_id) in agent_mapping:
+                actual_agent_id = agent_mapping[int(selected_agent_id)]
+                selected_agent = self.team_context.agents[actual_agent_id]
                 
                 # Set subtask and call the next agent
                 selected_agent.subtask = subtask

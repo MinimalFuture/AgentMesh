@@ -18,6 +18,9 @@ class GoogleSearch(BaseTool):
     }
     config: dict = {}
 
+    def __init__(self, config):
+        self.config = config or {}
+
     def execute(self, args: dict) -> ToolResult:
         api_key = self.config.get("api_key")  # Replace with your actual API key
         url = "https://google.serper.dev/search"

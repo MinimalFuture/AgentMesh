@@ -9,19 +9,17 @@ class LLMRequest:
     for making a call to the model.
     """
     def __init__(self, messages: list,
-                 temperature=0.5, max_tokens=8192, json_format=False, stream=False):
+                 temperature=0.5, json_format=False, stream=False):
         """
         Initialize the BaseRequest with the necessary fields.
 
         :param messages: A list of messages to be sent to the model.
         :param temperature: The sampling temperature for the model.
-        :param max_tokens: The maximum number of tokens to generate.
         :param json_format: Whether to request JSON formatted response.
         :param stream: Whether to enable streaming for the response.
         """
         self.messages = messages
         self.temperature = temperature
-        self.max_tokens = max_tokens
         self.json_format = json_format
         self.stream = stream
 
@@ -55,7 +53,6 @@ class LLMModel:
             "model": self.model,
             "messages": request.messages,
             "temperature": request.temperature,
-            "max_tokens": request.max_tokens
         }
         if request.json_format:
             data["response_format"] = {"type": "json_object"}
@@ -82,7 +79,6 @@ class LLMModel:
             "model": self.model,
             "messages": request.messages,
             "temperature": request.temperature,
-            "max_tokens": request.max_tokens,
             "stream": True  # Enable streaming
         }
         if request.json_format:
