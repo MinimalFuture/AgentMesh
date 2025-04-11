@@ -1,7 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import requests
 import json
-from typing import Optional
 
 
 class LLMRequest:
@@ -9,23 +8,17 @@ class LLMRequest:
     Represents a request to a model, encapsulating all necessary parameters 
     for making a call to the model.
     """
-    def __init__(self, model: str, messages: list,
-                 model_provider: Optional[str] = None,
+    def __init__(self, messages: list,
                  temperature=0.5, max_tokens=8192, json_format=False, stream=False):
         """
         Initialize the BaseRequest with the necessary fields.
 
-        :param model: The name of the model to be used.
         :param messages: A list of messages to be sent to the model.
-        :param model_provider: Optional. The provider of the model (e.g., 'openai').
-                              If not provided, it will be auto-determined.
         :param temperature: The sampling temperature for the model.
         :param max_tokens: The maximum number of tokens to generate.
         :param json_format: Whether to request JSON formatted response.
         :param stream: Whether to enable streaming for the response.
         """
-        self.model_provider = model_provider
-        self.model = model
         self.messages = messages
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -39,10 +32,11 @@ class LLMModel:
     instantiation and calling the model with requests. Subclasses should implement 
     the specific model logic.
     """
-    def __init__(self, model: str, api_base: str, api_key: str):
+    def __init__(self, model: str, api_key: str, api_base: str = None):
         self.model = model
-        self.api_base = api_base
         self.api_key = api_key
+        self.api_base = api_base
+
 
     @abstractmethod
     def call(self, request: LLMRequest):
@@ -58,7 +52,7 @@ class LLMModel:
         }
 
         data = {
-            "model": request.model,
+            "model": self.model,
             "messages": request.messages,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens
@@ -85,7 +79,7 @@ class LLMModel:
         }
 
         data = {
-            "model": request.model,
+            "model": self.model,
             "messages": request.messages,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,

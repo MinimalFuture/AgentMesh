@@ -1,26 +1,27 @@
 from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
-from agentmesh.models import LLMRequest
-from agentmesh.models.model_client import ModelClient
+from agentmesh.models import LLMRequest, LLMModel
+from agentmesh.models.model_factory import ModelFactory
 from agentmesh.protocal.agent import Agent
 from agentmesh.protocal.context import TeamContext
 
 
 class AgentTeam:
-    def __init__(self, name: str, description: str, rule: str):
+    def __init__(self, name: str, description: str, rule: str = "", model: LLMModel = None):
         """
         Initialize the AgentTeam with a name, description, rules, and a list of agents.
 
         :param name: The name of the agent group.
         :param description: A description of the agent group.
         :param rule: The rules governing the agent group.
+        :param model: An instance of LLMModel to be used by the team.
         """
         self.name = name
         self.description = description
         self.rule = rule
         self.agents = []
         self.context = TeamContext(name, description, rule, agents=self.agents)
-        self.model = None  # Default model for the team
+        self.model: LLMModel = model  # Instance of LLMModel
 
     def add(self, agent: Agent):
         """
@@ -42,7 +43,6 @@ class AgentTeam:
         """
         self.context.user_task = task
         self.context.model = self.model  # Set the model in the context
-        model_client = ModelClient()
 
         # Print user task and team information
         print(f"User Task: {task}")
@@ -61,10 +61,7 @@ class AgentTeam:
         # Start loading animation
         loading = LoadingIndicator(message="Select an agent in the team...", animation_type="spinner")
         loading.start()
-
-        
         request = LLMRequest(
-            model=self.model,  # Use team's model
             messages=[{
                 "role": "user",
                 "content": prompt
@@ -73,8 +70,8 @@ class AgentTeam:
             json_format=True
         )
 
-        # Get the model instance and decide which agent to use
-        response = model_client.llm(request)
+        # Directly call the model instance
+        response = self.model.call(request)
 
         # Stop loading animation
         loading.stop()

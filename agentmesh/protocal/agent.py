@@ -4,26 +4,26 @@ import time
 from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
 from agentmesh.common.utils.xml_util import XmlResParser
-from agentmesh.models import LLMRequest
-from agentmesh.models.model_client import ModelClient
+from agentmesh.models import LLMRequest, LLMModel
+from agentmesh.models.model_factory import ModelFactory
 from agentmesh.protocal.context import TeamContext, AgentOutput
 from agentmesh.tools.base_tool import BaseTool
 
 
 class Agent:
-    def __init__(self, name: str, system_prompt: str, model: str, description: str, team_context=None):
+    def __init__(self, name: str, system_prompt: str, description: str, model: LLMModel = None, team_context=None):
         """
         Initialize the Agent with a name, system prompt, model, description, and optional group context.
 
         :param name: The name of the agent.
         :param system_prompt: The system prompt for the agent.
-        :param model: The model used by the agent.
+        :param model: An instance of LLMModel to be used by the agent.
         :param description: A description of the agent.
         :param team_context: Optional reference to the group context.
         """
         self.name = name
         self.system_prompt = system_prompt
-        self.model = model
+        self.model: LLMModel = model  # Instance of LLMModel
         self.description = description
         self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
@@ -96,8 +96,6 @@ Your sub task: {self.subtask}"""
         """
         Execute the agent's task by querying the model and deciding on the next steps.
         """
-        model_client = ModelClient()
-
         final_answer = None
         current_step = 0
         raw_response = ""
@@ -119,7 +117,6 @@ Your sub task: {self.subtask}"""
 
             # Generate model request
             request = LLMRequest(
-                model=model_to_use,
                 messages=messages,
                 temperature=0,
                 max_tokens=500,
@@ -132,8 +129,8 @@ Your sub task: {self.subtask}"""
             loading = LoadingIndicator(message="Thinking...", animation_type="spinner")
             loading.start()
 
-            # Get model response
-            stream_response = model_client.llm_stream(request)
+            # Get model response directly from the model instance
+            stream_response = model_to_use.call_stream(request)
             parser = XmlResParser()
             raw_response = ""
             # Create element display area
@@ -215,7 +212,8 @@ Your sub task: {self.subtask}"""
 
         :return: True if the next agent should be invoked, False otherwise.
         """
-        model_client = ModelClient()
+        # Get the model to use - use team's model
+        model_to_use = self.team_context.model
 
         # Create a request to the model to determine if the next agent should be invoked
         agents_str = ', '.join(
@@ -237,12 +235,13 @@ Your sub task: {self.subtask}"""
         loading.start()
 
         # Use team's model for agent selection decision
-        request = LLMRequest(model=self.team_context.model,
-                             messages=[{"role": "user", "content": prompt}],
-                             temperature=0,
-                             json_format=True)
+        request = LLMRequest(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            json_format=True
+        )
 
-        response = model_client.llm(request)
+        response = model_to_use.call(request)
 
         # Stop loading animation
         loading.stop()
@@ -251,17 +250,34 @@ Your sub task: {self.subtask}"""
         decision_text = response["choices"][0]["message"]["content"]
         try:
             decision_res = string_util.json_loads(decision_text)
-            selected_agent_id = string_util.json_loads(decision_text).get("id")
-            subtask = decision_res.get("subtask")
-            if int(selected_agent_id) < 0:
+            selected_agent_id = decision_res.get("id")
+            
+            # Check if we should stop the chain
+            if selected_agent_id is None or int(selected_agent_id) < 0:
+                return False
+            
+            # Get subtask
+            subtask = decision_res.get("subtask", "")
+            
+            # Prevent self-recursion - don't allow an agent to call itself
+            if int(selected_agent_id) >= 0 and int(selected_agent_id) < len(self.team_context.agents):
+                selected_agent = self.team_context.agents[int(selected_agent_id)]
+                # Check if the selected agent is the current agent
+                if selected_agent.name == self.name:
+                    print(f"\n[Warning] Agent '{self.name}' attempted to call itself. Stopping chain.")
+                    return False
+                
+                # Set subtask and call the next agent
+                selected_agent.subtask = subtask
+                print()
+                selected_agent.step()
                 return True
-            selected_agent: Agent = self.team_context.agents[selected_agent_id]
-            selected_agent.subtask = subtask
-            print()
-            selected_agent.step()
+            else:
+                print(f"\n[Warning] Invalid agent ID: {selected_agent_id}")
+                return False
         except Exception as e:
             print(f"\n[Error] Failed to determine next agent: {e}")
-        return True
+            return False
 
     def _fetch_agents_outputs(self) -> str:
         agent_outputs_list = []
@@ -299,13 +315,14 @@ Team Rules: {group_rules}
 ## List of all members:
 {agents_str}
 
+## Members have replied
+{agent_outputs_list}
+
 ## Attention
 1. You need to determine whether the next member is needed and which member is the most suitable based on the user's question and the rules of the team 
 2. If you think the answers given by the executed members are able to answer the user's questions, return {{"id": -1}} immediately; otherwise, select the next suitable member ID and subtask content in the following JSON structure which can be parsed directly by json.loads(): 
 {{"id": <member_id>, "subtask": ""}}
-
-## Members have replied
-{agent_outputs_list}
+3. Always reply in JSON format which can be parsed directly by json.loads()
 
 ## User Original Task:
 {user_task}"""

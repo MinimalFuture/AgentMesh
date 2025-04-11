@@ -1,6 +1,5 @@
 import argparse
-import sys
-from agentmesh.common import load_config, config
+from agentmesh.common import load_config, config, ModelFactory
 from agentmesh.tools.tool_manager import ToolManager
 from agentmesh.protocal import AgentTeam, Agent
 
@@ -20,23 +19,34 @@ def create_team_from_config(team_name):
     # Get team configuration
     team_config = teams_config[team_name]
     
-    # Create team
+    # Initialize ModelFactory
+    model_factory = ModelFactory()
+    
+    # Get team's model
+    team_model_name = team_config.get("model", "gpt-4o")
+    team_model = model_factory.get_model(team_model_name)
+    
+    # Create team with the model
     team = AgentTeam(
         name=team_name,
         description=team_config.get("description", ""),
-        rule=team_config.get("rule", "")
+        rule=team_config.get("rule", ""),
+        model=team_model
     )
-    
-    # Set team's default model
-    team.model = team_config.get("model", "gpt-4o")
     
     # Create and add agents to the team
     agents_config = team_config.get("agents", [])
     for agent_config in agents_config:
+        # Check if agent has a specific model
+        if agent_config.get("model"):
+            agent_model = model_factory.get_model(agent_config.get("model"))
+        else:
+            agent_model = team_model
+        
         agent = Agent(
             name=agent_config.get("name", ""),
             system_prompt=agent_config.get("system_prompt", ""),
-            model=agent_config.get("model", ""),  # Model can be empty, will use team's model
+            model=agent_model,  # Use agent's model if specified, otherwise will use team's model
             description=agent_config.get("description", "")
         )
         
