@@ -37,3 +37,14 @@ teams:
         tools:
           - time
           - calculator
+
+  browser_team:
+    model: "gpt-4o"
+    description: "A Search Assistant Team"
+    agents:
+      - name: "Search Assistant"
+        description: "Searching by operating the browser"
+        system_prompt: "You are a browser operation assistant, completing user tasks by operating the browser"
+        tools:
+          - time
+          - browser

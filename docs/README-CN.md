@@ -42,6 +42,14 @@ source .venv/bin/activate
 pip install requirements.txt
 ```
 
+如果需要使用浏览器工具，还需要安装 (可选):
+
+```bash
+pip install browser-use
+playwright install
+```
+
+
 ### 2.配置
 
 配置文件为根目录下的 `config.yaml`，包含模型配置和Agent配置，可以从模板文件复制后修改：

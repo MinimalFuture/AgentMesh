@@ -1,5 +1,7 @@
 <p align="center"><img src= "https://github.com/user-attachments/assets/60534980-ac81-475f-9462-d2205c085028" alt="Chatgpt-on-Wechat" width="500" /></p>
 
+# AgentMesh
+
 English | <a href="/docs/README-CN.md">中文</a>
 
 AgentMesh is a **Multi-Agent platform** that provides an AI Agent development framework, communication protocols between multiple Agents, complex task planning, and autonomous decision-making. With this platform, you can quickly build your Agent Team to accomplish tasks through collaboration between Agents.
@@ -40,6 +42,13 @@ Install dependencies:
 
 ```bash
 pip install requirements.txt
+```
+
+If you need to use browser tools, you also need to install (optional):
+
+```bash
+pip install browser-use
+playwright install
 ```
 
 ### 1.2 Configuration
