@@ -1,4 +1,5 @@
-<p align="center"><img src= "https://github.com/user-attachments/assets/60534980-ac81-475f-9462-d2205c085028" alt="Chatgpt-on-Wechat" width="500" /></p>
+<p align="center"><img src= "https://github.com/user-attachments/assets/1499f725-0a7c-42cd-9968-a607a95af5d4" alt="Chatgpt-on-Wechat" width="450" /></p>
+
 
 <a href="/README.md">English</a> | 中文
 
