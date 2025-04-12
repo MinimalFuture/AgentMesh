@@ -39,7 +39,7 @@ source .venv/bin/activate
 Install dependencies:
 
 ```bash
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 If you need to use browser tools, you also need to install (optional):

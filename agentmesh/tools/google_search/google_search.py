@@ -18,7 +18,7 @@ class GoogleSearch(BaseTool):
     }
     config: dict = {}
 
-    def __init__(self, config):
+    def __init__(self, config=None):
         self.config = config or {}
 
     def execute(self, args: dict) -> ToolResult:

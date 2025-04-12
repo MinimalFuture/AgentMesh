@@ -1,5 +1,6 @@
-from typing import Any, Optional
+from typing import Any
 from pydantic import BaseModel, Field
+from agentmesh.models.llm.base_model import LLMModel
 
 
 class ToolResult(BaseModel):
@@ -21,6 +22,7 @@ class BaseTool:
     name: str = "base_tool"
     description: str = "Base tool"
     params: dict = {}  # Store JSON Schema
+    model: LLMModel = None
 
     @classmethod
     def get_json_schema(cls) -> dict:

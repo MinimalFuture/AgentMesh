@@ -1,3 +1,5 @@
+from agentmesh.protocal.task import Task
+
 class TeamContext:
     def __init__(self, name: str, description: str, rule: str, agents: list):
         """
@@ -12,7 +14,8 @@ class TeamContext:
         self.description = description
         self.rule = rule
         self.agents = agents
-        self.user_task = ""
+        self.user_task = ""  # For backward compatibility
+        self.task = None  # Will be a Task instance
         self.model = None  # Will be an instance of LLMModel
         # List of agents that have been executed
         self.agent_outputs: list = []

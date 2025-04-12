@@ -3,12 +3,13 @@ from typing import Any, Dict
 import json
 import re
 
+import os
 from browser_use import Browser
 from browser_use import BrowserConfig
 from browser_use.browser.context import BrowserContext, BrowserContextConfig
 from agentmesh.tools.base_tool import BaseTool, ToolResult
 from agentmesh.tools.browser.browser_action import *
-from agentmesh.models import LLMRequest, LLMModel
+from agentmesh.models import LLMRequest
 from agentmesh.models.model_factory import ModelFactory
 from browser_use.dom.service import DomService
 
@@ -76,6 +77,7 @@ class BrowserTool(BaseTool):
     async def _init_browser(self) -> BrowserContext:
         """Ensure the browser is initialized"""
         if not BrowserTool._initialized:
+            os.environ['BROWSER_USE_LOGGING_LEVEL'] = 'error'
             print("Initializing browser...")
             # Initialize the browser synchronously
             BrowserTool.browser = Browser(BrowserConfig(headless=False, disable_security=True))  # Set to non-headless mode to see the browser window
@@ -170,7 +172,7 @@ The following is the information of the current browser page. Each serial number
                     temperature=0,
                     json_format=True
                 )
-                model = ModelFactory().get_model(model_name="gpt-4o")
+                model = self.model or ModelFactory().get_model(model_name="gpt-4o")
                 response = model.call(request)
                 extract_content = response["choices"][0]["message"]["content"]
                 print(f"Extract from page: {extract_content}")

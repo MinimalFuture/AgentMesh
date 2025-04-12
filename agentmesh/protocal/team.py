@@ -4,6 +4,8 @@ from agentmesh.models import LLMRequest, LLMModel
 from agentmesh.models.model_factory import ModelFactory
 from agentmesh.protocal.agent import Agent
 from agentmesh.protocal.context import TeamContext
+from agentmesh.protocal.task import Task, TaskType, TaskStatus
+from typing import Union
 
 
 class AgentTeam:
@@ -37,15 +39,26 @@ class AgentTeam:
             
         self.agents.append(agent)
 
-    def run(self, task: str):
+    def run(self, task: Union[str, Task]):
         """
         Decide which agent will handle the task and execute its step method.
+        
+        :param task: The task to be processed, can be a string or Task object
         """
-        self.context.user_task = task
+        # Convert string task to Task object if needed
+        if isinstance(task, str):
+            task = Task(content=task)
+            
+        # Update task status
+        task.update_status(TaskStatus.PROCESSING)
+        
+        # Store task in context
+        self.context.user_task = task.get_text()
+        self.context.task = task
         self.context.model = self.model  # Set the model in the context
 
         # Print user task and team information
-        print(f"User Task: {task}")
+        print(f"User Task: {task.get_text()}")
         print(f"Team {self.name} received the task and started processing")
         print()
 
@@ -56,7 +69,8 @@ class AgentTeam:
         )
 
         prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description,
-                                              group_rules=self.rule, agents_str=agents_str, user_question=task)
+                                              group_rules=self.rule, agents_str=agents_str,
+                                              user_question=task.get_text())
 
         # Start loading animation
         loading = LoadingIndicator(message="Select an agent in the team...", animation_type="spinner")
@@ -93,6 +107,9 @@ class AgentTeam:
         else:
             print("No agent found with the selected id.")
 
+        # Update task status
+        task.update_status(TaskStatus.COMPLETED)
+        
         # Print task completion information
         print(f"\nTeam {self.name} completed the task")
 

@@ -33,11 +33,13 @@ class Agent:
         self.conversation_history = []
         self.action_history = []
         self.ext_data = ""
-        if tools is None:
-            tools = []
-        self.tools = tools
+        self.tools = []
+        if tools:
+            for tool in tools:
+                self.add_tool(tool)
 
     def add_tool(self, tool: BaseTool):
+        tool.model = self.model
         self.tools.append(tool)
 
     def _build_tools_prompt(self) -> str:
@@ -94,6 +96,7 @@ Your sub task: {self.subtask}"""
     def _find_tool(self, tool_name: str):
         for tool in self.tools:
             if tool.name == tool_name:
+                tool.model = self.model
                 return tool
 
     def step(self):
@@ -269,28 +272,15 @@ Your sub task: {self.subtask}"""
             
             # Get subtask
             subtask = decision_res.get("subtask", "")
-            
-            # Create a mapping from original indices to new indices (excluding current agent)
-            agent_mapping = {}
-            new_idx = 0
-            for i, agent in enumerate(self.team_context.agents):
-                if agent.name != self.name:
-                    agent_mapping[new_idx] = i
-                    new_idx += 1
-            
+
             # Map the selected agent ID to the actual agent ID
-            if int(selected_agent_id) in agent_mapping:
-                actual_agent_id = agent_mapping[int(selected_agent_id)]
-                selected_agent = self.team_context.agents[actual_agent_id]
-                
-                # Set subtask and call the next agent
-                selected_agent.subtask = subtask
-                print()
-                selected_agent.step()
-                return True
-            else:
-                print(f"\n[Warning] Invalid agent ID: {selected_agent_id}")
-                return False
+            selected_agent = self.team_context.agents[int(selected_agent_id)]
+
+            # Set subtask and call the next agent
+            selected_agent.subtask = subtask
+            print()
+            selected_agent.step()
+            return True
         except Exception as e:
             print(f"\n[Error] Failed to determine next agent: {e}")
             return False

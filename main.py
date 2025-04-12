@@ -1,7 +1,7 @@
 import argparse
 from agentmesh.common import load_config, config, ModelFactory
 from agentmesh.tools.tool_manager import ToolManager
-from agentmesh.protocal import AgentTeam, Agent
+from agentmesh.protocal import AgentTeam, Agent, Task
 
 
 def create_team_from_config(team_name):
@@ -121,7 +121,7 @@ def main():
             
             if user_input.strip():
                 # Run the team with the user's task
-                team.run(user_input)
+                team.run(Task(content=user_input))
                 print("\nEnter your next task (type 'exit' to quit):")
         except KeyboardInterrupt:
             print("\nExiting AgentMesh. Goodbye!")

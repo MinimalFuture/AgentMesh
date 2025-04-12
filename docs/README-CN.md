@@ -40,7 +40,7 @@ source .venv/bin/activate
 安装依赖：
 
 ```bash
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 如果需要使用浏览器工具，还需要安装 (可选):
