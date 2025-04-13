@@ -1,8 +1,8 @@
-<p align="center"><img src= "https://github.com/user-attachments/assets/1499f725-0a7c-42cd-9968-a607a95af5d4" alt="AgentMesh" width="450" /></p>
+<p align="center"><img src= "https://github.com/user-attachments/assets/743bb0da-3070-4e89-b744-e7b3ab886fe8" alt="AgentMesh" width="450" /></p>
 
 English | <a href="/docs/README-CN.md">中文</a>
 
-AgentMesh is a **Multi-Agent platform** for AI agents development, providing a framework for inter-agent communication,
+AgentMesh is a **Multi-Agent platform** for AI agents building, providing a framework for inter-agent communication,
 task planning, and autonomous decision-making. Build your agent team quickly and solve complex tasks through agent
 collaboration.
 
@@ -91,7 +91,7 @@ team.add(Agent(name="Developer", description="Implements code based on requireme
                tools=[Calculator(), GoogleSearch()]))
 
 # Execute task
-team.run(task="Write a Snake client game")
+result = team.run(task="Write a Snake client game")
 ```
 
 ## 3. Web Service

@@ -12,10 +12,11 @@ logging.getLogger("root").setLevel(logging.ERROR)
 # Now import the rest
 from agentmesh.protocal import Agent, AgentTeam
 from agentmesh.protocal.task import Task
+from agentmesh.protocal.result import TeamResult
 from agentmesh.models import LLMModel
 from agentmesh.common.utils.log import setup_logging
 
 # Setup logging when the package is imported
 setup_logging()
 
-__all__ = ['AgentTeam', 'Agent', 'LLMModel', 'Task']
+__all__ = ['AgentTeam', 'Agent', 'LLMModel', 'Task', 'TeamResult']
