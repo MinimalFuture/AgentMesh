@@ -1,4 +1,5 @@
 from typing import Union, Literal
+import json
 
 from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
@@ -113,16 +114,31 @@ class AgentTeam:
             if loading:
                 loading.stop()
 
-            reply_text = response["choices"][0]["message"]["content"]
+            # Check if the API call was successful
+            if response.is_error:
+                error_message = response.get_error_msg()
+                # Use logger to record errors regardless of output mode
+                logger.error(f"Error: {error_message}")
+                # No need to duplicate error messages in console, as logger already handles it
+                result.complete("failed")
+                return result
+
+            reply_text = response.data["choices"][0]["message"]["content"]
 
             # Parse the response to get the selected agent's id
-            decision_res = string_util.json_loads(reply_text)
-            selected_agent_id = decision_res.get("id")  # Extract the id from the response
-            subtask = decision_res.get("subtask")
+            try:
+                decision_res = string_util.json_loads(reply_text)
+                selected_agent_id = decision_res.get("id")  # Extract the id from the response
+                subtask = decision_res.get("subtask")
 
-            # Find the selected agent based on the id
-            selected_agent: Agent = self.agents[selected_agent_id]
-            selected_agent.subtask = subtask
+                # Find the selected agent based on the id
+                selected_agent: Agent = self.agents[selected_agent_id]
+                selected_agent.subtask = subtask
+            except (json.JSONDecodeError, IndexError, KeyError, ValueError) as e:
+                error_message = f"Failed to parse model response: {str(e)}\nResponse: {reply_text[:100]}..."
+                logger.error(f"Error: {error_message}")
+                result.complete("failed")
+                return result
 
             # Pass output mode to agent
             selected_agent.output_mode = output_mode
@@ -215,11 +231,13 @@ class AgentTeam:
 
         except Exception as e:
             # Handle any exceptions
+            import traceback
             error_msg = f"Error during team execution: {str(e)}"
-            if output_mode == "print":
-                print(error_msg)
-            else:
-                logger.error(error_msg)
+            detail_msg = traceback.format_exc()
+
+            logger.error(error_msg)
+            logger.debug(f"Error details: {detail_msg}")
+
             result.complete("failed")
             return result
 

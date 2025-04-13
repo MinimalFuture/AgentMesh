@@ -2,6 +2,7 @@ from abc import abstractmethod
 import requests
 import json
 from agentmesh.common.enums import ModelApiBase, ModelProvider
+from typing import Optional, Dict, Any
 
 
 class LLMRequest:
@@ -26,6 +27,47 @@ class LLMRequest:
         self.stream = stream
 
 
+class LLMResponse:
+    """
+    Represents a response from an LLM API call, including error handling.
+    """
+
+    def __init__(self, success: bool = True, data: Optional[Dict[str, Any]] = None,
+                 error_message: str = "", status_code: int = 200):
+        self.success = success
+        self.data = data or {}
+        self.error_message = error_message
+        self.status_code = status_code
+
+    @property
+    def is_error(self) -> bool:
+        return not self.success
+
+    def get_error_msg(self) -> str:
+        """Return a user-friendly error message based on status code and error details"""
+        if not self.is_error:
+            return ""
+
+        # If there is a specific error message, prioritize using the API's error message
+        if self.error_message and self.error_message != "Unknown error":
+            return f"API error: {self.error_message} (Status code: {self.status_code})"
+
+        # If there is no specific error message, provide a generic error message based on status code
+        if self.status_code == 401:
+            return f"Authentication error: Invalid API key or token. Please check your API credentials. (Status code: {self.status_code})"
+        elif self.status_code == 403:
+            return f"Authorization error: You don't have permission to access this resource. (Status code: {self.status_code})"
+        elif self.status_code == 404:
+            return f"Resource not found: The requested endpoint doesn't exist. Please check your API base URL. (Status code: {self.status_code})"
+        elif self.status_code == 429:
+            return f"Rate limit exceeded: Too many requests. Please try again later or check your rate limits. (Status code: {self.status_code})"
+        elif self.status_code >= 500:
+            return f"Server error: The API service is experiencing issues. Please try again later. (Status code: {self.status_code})"
+        else:
+            # Default error message
+            return f"API error: Unknown error occurred (Status code: {self.status_code})"
+
+
 class LLMModel:
     """
     Base class for all AI models. This class provides a common interface for AI model 
@@ -42,12 +84,12 @@ class LLMModel:
             self.api_base = ModelApiBase.get_api_base(provider)
 
     @abstractmethod
-    def call(self, request: LLMRequest):
+    def call(self, request: LLMRequest) -> LLMResponse:
         """
-        Call the OpenAI API with the given request parameters.
+        Call the API with the given request parameters.
 
         :param request: An instance of ModelRequest containing parameters for the API call.
-        :return: The response from the OpenAI API.
+        :return: An LLMResponse object containing the response or error information.
         """
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -64,9 +106,45 @@ class LLMModel:
 
         try:
             response = requests.post(f"{self.api_base}/chat/completions", headers=headers, json=data)
-            return response.json()
+
+            # Check if the request was successful
+            if response.status_code == 200:
+                return LLMResponse(success=True, data=response.json(), status_code=response.status_code)
+            else:
+                # Try to extract error message from response
+                error_msg = "Unknown error"
+                try:
+                    error_data = response.json()
+                    if "error" in error_data:
+                        if isinstance(error_data["error"], dict) and "message" in error_data["error"]:
+                            error_msg = error_data["error"]["message"]
+                        else:
+                            error_msg = str(error_data["error"])
+                    elif "message" in error_data:
+                        error_msg = error_data["message"]
+                except:
+                    error_msg = response.text or "Could not parse error response"
+
+                return LLMResponse(
+                    success=False,
+                    error_message=error_msg,
+                    status_code=response.status_code
+                )
+
+        except requests.RequestException as e:
+            # Handle connection errors, timeouts, etc.
+            return LLMResponse(
+                success=False,
+                error_message=f"Request failed: {str(e)}",
+                status_code=0  # Use 0 for connection errors
+            )
         except Exception as e:
-            print(e)
+            # Handle any other exceptions
+            return LLMResponse(
+                success=False,
+                error_message=f"Unexpected error: {str(e)}",
+                status_code=500
+            )
 
     def call_stream(self, request: LLMRequest):
         """
@@ -97,6 +175,31 @@ class LLMModel:
                 stream=True
             )
 
+            # Check for error response
+            if response.status_code != 200:
+                # Try to extract error message
+                try:
+                    error_data = json.loads(response.text)
+                    if "error" in error_data:
+                        if isinstance(error_data["error"], dict) and "message" in error_data["error"]:
+                            error_msg = error_data["error"]["message"]
+                        else:
+                            error_msg = str(error_data["error"])
+                    elif "message" in error_data:
+                        error_msg = error_data["message"]
+                    else:
+                        error_msg = response.text
+                except:
+                    error_msg = response.text or "Unknown error"
+
+                # Yield an error object that can be detected by the caller
+                yield {
+                    "error": True,
+                    "status_code": response.status_code,
+                    "message": error_msg
+                }
+                return
+
             for line in response.iter_lines():
                 if line:
                     line = line.decode('utf-8')
@@ -109,5 +212,17 @@ class LLMModel:
                             yield chunk
                         except json.JSONDecodeError:
                             continue
+        except requests.RequestException as e:
+            # Yield an error object for connection errors
+            yield {
+                "error": True,
+                "status_code": 0,
+                "message": f"Connection error: {str(e)}"
+            }
         except Exception as e:
-            print(f"Streaming error: {e}")
+            # Yield an error object for unexpected errors
+            yield {
+                "error": True,
+                "status_code": 500,
+                "message": f"Unexpected error: {str(e)}"
+            }

@@ -165,6 +165,16 @@ Your sub task: {self.subtask}"""
 
                 first_token = True
                 for chunk in stream_response:
+                    # Check if this is an error chunk
+                    if isinstance(chunk, dict) and chunk.get("error", False):
+                        if loading:
+                            loading.stop()
+                        error_message = chunk.get("message", "Unknown error")
+                        status_code = chunk.get("status_code", 0)
+                        # Use logger to record errors, no need to duplicate printing
+                        logger.error(f"Error: {error_message} (Status code: {status_code})")
+                        return f"Error: {error_message}"
+
                     if first_token:
                         first_token = False
                         if loading:
@@ -190,7 +200,15 @@ Your sub task: {self.subtask}"""
             else:
                 # Non-streaming mode for logger
                 response = model_to_use.call(request)
-                raw_response = response["choices"][0]["message"]["content"]
+
+                # Check if the API call was successful
+                if response.is_error:
+                    error_message = response.get_error_msg()
+                    # Use logger to record errors, no need to duplicate printing
+                    logger.error(f"Error: {error_message}")
+                    return f"Error: {error_message}"
+
+                raw_response = response.data["choices"][0]["message"]["content"]
 
                 # Parse the response
                 parser = XmlResParser()
@@ -303,7 +321,14 @@ Your sub task: {self.subtask}"""
         loading.stop()
         print()
 
-        decision_text = response["choices"][0]["message"]["content"]
+        # Check if API call was successful
+        if response.is_error:
+            error_message = response.get_error_msg()
+            logger.error(f"Error: {error_message}")
+            return -1  # If error occurs, return -1 to indicate not to call the next agent
+
+        # Get content from successful response
+        decision_text = response.data["choices"][0]["message"]["content"]
         try:
             decision_res = string_util.json_loads(decision_text)
             selected_agent_id = decision_res.get("id")
@@ -324,7 +349,7 @@ Your sub task: {self.subtask}"""
             # Return the ID of the next agent
             return int(selected_agent_id)
         except Exception as e:
-            print(f"\n[Error] Failed to determine next agent: {e}")
+            logger.error(f"Failed to determine next agent: {e}")
             return -1
 
     def _fetch_agents_outputs(self) -> str:
