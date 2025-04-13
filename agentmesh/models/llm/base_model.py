@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import requests
 import json
+from agentmesh.common.enums import ModelApiBase, ModelProvider
 
 
 class LLMRequest:
@@ -8,6 +9,7 @@ class LLMRequest:
     Represents a request to a model, encapsulating all necessary parameters 
     for making a call to the model.
     """
+
     def __init__(self, messages: list,
                  temperature=0.5, json_format=False, stream=False):
         """
@@ -30,11 +32,14 @@ class LLMModel:
     instantiation and calling the model with requests. Subclasses should implement 
     the specific model logic.
     """
+
     def __init__(self, model: str, api_key: str, api_base: str = None):
         self.model = model
         self.api_key = api_key
         self.api_base = api_base
-
+        if not api_base:
+            provider = ModelProvider.from_model_name(model)
+            self.api_base = ModelApiBase.get_api_base(provider)
 
     @abstractmethod
     def call(self, request: LLMRequest):

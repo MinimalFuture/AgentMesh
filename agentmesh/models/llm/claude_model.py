@@ -1,12 +1,13 @@
 from agentmesh.models.llm.base_model import LLMModel, LLMRequest
+from agentmesh.common.enums import ModelApiBase
 import requests
 import json
 
 
 class ClaudeModel(LLMModel):
     def __init__(self, model: str, api_key: str, api_base: str):
+        api_base = api_base or ModelApiBase.CLAUDE.value
         super().__init__(model, api_key=api_key, api_base=api_base)
-        self.api_base = api_base or "https://api.anthropic.com/v1"
 
     def call(self, request: LLMRequest):
         """
@@ -24,7 +25,7 @@ class ClaudeModel(LLMModel):
         # Extract system prompt if present and prepare Claude-compatible messages
         system_prompt = None
         claude_messages = []
-        
+
         for msg in request.messages:
             if msg["role"] == "system":
                 system_prompt = msg["content"]
@@ -38,7 +39,7 @@ class ClaudeModel(LLMModel):
             "max_tokens": self._get_max_tokens(),
             "temperature": request.temperature
         }
-        
+
         # Add system parameter if system prompt is present
         if system_prompt:
             data["system"] = system_prompt
@@ -51,10 +52,10 @@ class ClaudeModel(LLMModel):
                 headers=headers,
                 json=data
             )
-            
+
             # Convert Claude response to OpenAI format
             claude_response = response.json()
-            
+
             # Format the response to match OpenAI's structure
             openai_format_response = {
                 "id": claude_response.get("id", ""),
@@ -74,13 +75,13 @@ class ClaudeModel(LLMModel):
                 "usage": {
                     "prompt_tokens": claude_response.get("usage", {}).get("input_tokens", 0),
                     "completion_tokens": claude_response.get("usage", {}).get("output_tokens", 0),
-                    "total_tokens": claude_response.get("usage", {}).get("input_tokens", 0) + 
+                    "total_tokens": claude_response.get("usage", {}).get("input_tokens", 0) +
                                     claude_response.get("usage", {}).get("output_tokens", 0)
                 }
             }
-            
+
             return openai_format_response
-            
+
         except Exception as e:
             print(f"Error calling Claude API: {e}")
             return {"error": str(e)}
@@ -101,7 +102,7 @@ class ClaudeModel(LLMModel):
         # Extract system prompt if present and prepare Claude-compatible messages
         system_prompt = None
         claude_messages = []
-        
+
         for msg in request.messages:
             if msg["role"] == "system":
                 system_prompt = msg["content"]
@@ -116,7 +117,7 @@ class ClaudeModel(LLMModel):
             "temperature": request.temperature,
             "stream": True
         }
-        
+
         # Add system parameter if system prompt is present
         if system_prompt:
             data["system"] = system_prompt
@@ -132,7 +133,7 @@ class ClaudeModel(LLMModel):
                 json=data,
                 stream=True
             )
-            
+
             for line in response.iter_lines():
                 if line:
                     line = line.decode('utf-8')
@@ -146,7 +147,7 @@ class ClaudeModel(LLMModel):
                             content = ""
                             if "delta" in chunk and "text" in chunk["delta"]:
                                 content = chunk["delta"]["text"]
-                            
+
                             # Convert Claude streaming format to OpenAI format
                             yield {
                                 "id": chunk.get("id", ""),
@@ -167,7 +168,6 @@ class ClaudeModel(LLMModel):
                             continue
         except Exception as e:
             print(f"Streaming error with Claude API: {e}")
-
 
     def _get_max_tokens(self) -> int:
         model = self.model
