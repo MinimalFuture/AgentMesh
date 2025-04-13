@@ -6,8 +6,6 @@ setup(
     author="Minimal Future",
     author_email="zyj@zhayujie.com",
     description="An open-source multi-agent framework for building agent teams with LLMs",
-    #long_description=long_description,
-    #long_description_content_type="text/markdown",
     url="https://github.com/MinimalFuture/AgentMesh",
     packages=find_packages(),
     classifiers=[
@@ -26,5 +24,8 @@ setup(
         "pyyaml",
         "pydantic"
     ],
+    extras_require={
+        "full": ["browser-use>=0.1.40"],
+    },
     include_package_data=True,
-) 
+)

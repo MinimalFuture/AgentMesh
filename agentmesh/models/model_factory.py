@@ -1,9 +1,10 @@
-from typing import Iterator, Optional
-from agentmesh.models.llm.base_model import LLMModel
+from typing import Optional
+
 from agentmesh.common import config
-from agentmesh.models.llm.openai_model import OpenAIModel
+from agentmesh.models.llm.base_model import LLMModel
 from agentmesh.models.llm.claude_model import ClaudeModel
 from agentmesh.models.llm.deepseek_model import DeepSeekModel
+from agentmesh.models.llm.openai_model import OpenAIModel
 
 
 class ModelFactory:
@@ -51,13 +52,13 @@ class ModelFactory:
         :return: An instance of the corresponding model.
         """
         provider = self._determine_model_provider(model_name, model_provider)
-        
+
         # If api_base and api_key are not provided, load from config
         if not api_base or not api_key:
             model_config = config().get("models", {}).get(provider, {})
             api_base = api_base or model_config.get("api_base")
             api_key = api_key or model_config.get("api_key")
-        
+
         if provider == "openai":
             return OpenAIModel(model=model_name, api_base=api_base, api_key=api_key)
         elif provider == "claude":

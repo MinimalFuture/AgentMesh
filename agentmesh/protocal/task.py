@@ -1,8 +1,8 @@
-from enum import Enum
-from typing import Optional, Dict, Any, List, Union
-from dataclasses import dataclass, field
-import uuid
 import time
+import uuid
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Dict, Any, List
 
 
 class TaskType(Enum):
@@ -17,10 +17,10 @@ class TaskType(Enum):
 
 class TaskStatus(Enum):
     """Enum representing the status of a task."""
-    INIT = "init"           # 初始状态
+    INIT = "init"  # 初始状态
     PROCESSING = "processing"  # 处理中
-    COMPLETED = "completed"    # 已完成
-    FAILED = "failed"          # 失败
+    COMPLETED = "completed"  # 已完成
+    FAILED = "failed"  # 失败
 
 
 @dataclass
@@ -48,13 +48,13 @@ class Task:
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Media content
     images: List[str] = field(default_factory=list)
     videos: List[str] = field(default_factory=list)
     audios: List[str] = field(default_factory=list)
     files: List[str] = field(default_factory=list)
-    
+
     def __init__(self, content: str = "", **kwargs):
         """
         Initialize a Task with content and optional keyword arguments.
@@ -83,7 +83,7 @@ class Task:
             The text content
         """
         return self.content
-    
+
     def update_status(self, status: TaskStatus) -> None:
         """
         Update the status of the task.

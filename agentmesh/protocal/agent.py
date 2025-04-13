@@ -3,17 +3,17 @@ import time
 
 from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
+from agentmesh.common.utils.log import logger
 from agentmesh.common.utils.xml_util import XmlResParser
 from agentmesh.models import LLMRequest, LLMModel
-from agentmesh.models.model_factory import ModelFactory
 from agentmesh.protocal.context import TeamContext, AgentOutput
-from agentmesh.tools.base_tool import BaseTool
 from agentmesh.protocal.result import AgentAction, AgentActionType, ToolResult
+from agentmesh.tools.base_tool import BaseTool
 
 
 class Agent:
     def __init__(self, name: str, system_prompt: str, description: str, model: LLMModel = None, team_context=None,
-                 tools=None):
+                 tools=None, output_mode="print"):
         """
         Initialize the Agent with a name, system prompt, model, description, and optional group context.
 
@@ -22,6 +22,9 @@ class Agent:
         :param model: An instance of LLMModel to be used by the agent.
         :param description: A description of the agent.
         :param team_context: Optional reference to the group context.
+        :param tools: Optional list of tools for the agent to use.
+        :param output_mode: Control how execution progress is displayed: 
+                           "print" for console output or "logger" for using logger
         """
         self.name = name
         self.system_prompt = system_prompt
@@ -35,6 +38,7 @@ class Agent:
         self.action_history = []
         self.ext_data = ""
         self.tools = []
+        self.output_mode = output_mode
         if tools:
             for tool in tools:
                 self.add_tool(tool)
@@ -100,6 +104,13 @@ Your sub task: {self.subtask}"""
                 tool.model = self.model
                 return tool
 
+    # output function based on mode
+    def output(self, message="", end="\n"):
+        if self.output_mode == "print":
+            print(message, end=end)
+        elif message:
+            logger.info(message)
+
     def step(self):
         """
         Execute the agent's task by querying the model and deciding on the next steps.
@@ -107,17 +118,17 @@ Your sub task: {self.subtask}"""
         final_answer = None
         current_step = 0
         raw_response = ""
-        
+
         # 初始化捕获的动作列表（如果不存在）
         if not hasattr(self, 'captured_actions'):
             self.captured_actions = []
-        
+
         # 初始化最终答案（如果不存在）
         if not hasattr(self, 'final_answer'):
             self.final_answer = ""
 
         # Print agent name and subtask
-        print(f"🤖 {self.name.strip()}: {self.subtask}")
+        self.output(f"🤖 {self.name.strip()}: {self.subtask}")
 
         while current_step < self.max_react_steps and not final_answer:
             user_prompt = self._build_react_prompt() + "\n\n## Historical steps:\n"
@@ -136,43 +147,66 @@ Your sub task: {self.subtask}"""
                 messages=messages,
                 temperature=0,
                 json_format=False,
-                stream=True
+                stream=self.output_mode == "print"  # Only stream in print mode
             )
 
-            # Start loading animation before getting model response
-            print()
-            loading = LoadingIndicator(message="Thinking...", animation_type="spinner")
-            loading.start()
+            # Start loading animation before getting model response (only in print mode)
+            loading = None
+            if self.output_mode == "print":
+                print()
+                loading = LoadingIndicator(message="Thinking...", animation_type="spinner")
+                loading.start()
 
-            # Get model response directly from the model instance
-            stream_response = model_to_use.call_stream(request)
-            parser = XmlResParser()
-            raw_response = ""
-            # Create element display area
+            # Get model response based on output mode
+            if self.output_mode == "print":
+                # Stream response in print mode
+                stream_response = model_to_use.call_stream(request)
+                parser = XmlResParser()
+                raw_response = ""
 
-            first_token = True
-            for chunk in stream_response:
-                if first_token:
-                    first_token = False
-                    loading.stop()
-                    print(f"Step {current_step + 1}:")
+                first_token = True
+                for chunk in stream_response:
+                    if first_token:
+                        first_token = False
+                        if loading:
+                            loading.stop()
+                        print(f"Step {current_step + 1}:")
 
-                # Ensure chunk is in the correct format
-                if isinstance(chunk, dict):
-                    if "choices" in chunk and len(chunk["choices"]) > 0:
-                        delta = chunk["choices"][0].get("delta", {})
-                        if "content" in delta:
-                            content = delta["content"]
-                            raw_response += content
-                            # Use parser to process each streaming content chunk
-                            parser.process_chunk(content)
-                else:
-                    # If chunk is a string, process it directly
-                    raw_response += chunk
-                    parser.process_chunk(chunk)
+                    # Ensure chunk is in the correct format
+                    if isinstance(chunk, dict):
+                        if "choices" in chunk and len(chunk["choices"]) > 0:
+                            delta = chunk["choices"][0].get("delta", {})
+                            if "content" in delta:
+                                content = delta["content"]
+                                raw_response += content
+                                # Use parser to process each streaming content chunk
+                                parser.process_chunk(content)
+                    else:
+                        # If chunk is a string, process it directly
+                        raw_response += chunk
+                        parser.process_chunk(chunk)
 
-            # Get parsing results
-            parsed = parser.get_parsed_data()
+                # Get parsing results
+                parsed = parser.get_parsed_data()
+            else:
+                # Non-streaming mode for logger
+                response = model_to_use.call(request)
+                raw_response = response["choices"][0]["message"]["content"]
+
+                # Parse the response
+                parser = XmlResParser()
+                parser.process_chunk(raw_response)
+                parsed = parser.get_parsed_data()
+
+                # Log the parsed data in a structured way
+                if "thought" in parsed:
+                    logger.info(f"🧠 {parsed['thought']}")
+                if "action" in parsed and parsed["action"] and parsed["action"].lower() != "null":
+                    action_input = parsed.get("action_input", {})
+                    action_input_str = json.dumps(action_input, ensure_ascii=False) if action_input else ""
+                    logger.info(f"🛠️ {parsed['action']}: {action_input_str}")
+                if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() != "null":
+                    logger.info(f"💬 {parsed['final_answer']}")
 
             # Handle final answer
             if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() != "null":
@@ -237,23 +271,23 @@ Your sub task: {self.subtask}"""
             for i, agent in enumerate(self.team_context.agents)
             if agent.name != self.name  # Exclude current agent
         )
-        
+
         # If no other agents are available, return -1
         if not agents_str:
             return -1
-        
+
         agent_outputs_list = self._fetch_agents_outputs()
 
         prompt = AGENT_DECISION_PROMPT.format(group_name=self.team_context.name,
                                               group_description=self.team_context.description,
                                               current_agent_name=self.name,
                                               group_rules=self.team_context.rule,
-                                              agent_outputs_list=agent_outputs_list, 
+                                              agent_outputs_list=agent_outputs_list,
                                               agents_str=agents_str,
                                               user_task=self.team_context.user_task)
 
         # Start loading animation
-        print()
+        self.output()
         loading = LoadingIndicator(message="Select agent in team...", animation_type="spinner")
         loading.start()
 
@@ -274,11 +308,11 @@ Your sub task: {self.subtask}"""
         try:
             decision_res = string_util.json_loads(decision_text)
             selected_agent_id = decision_res.get("id")
-            
+
             # Check if we should stop the chain
             if selected_agent_id is None or int(selected_agent_id) < 0:
                 return -1
-            
+
             # Get subtask
             subtask = decision_res.get("subtask", "")
 
@@ -287,7 +321,7 @@ Your sub task: {self.subtask}"""
 
             # Set subtask for the next agent
             selected_agent.subtask = subtask
-            
+
             # Return the ID of the next agent
             return int(selected_agent_id)
         except Exception as e:
@@ -320,19 +354,19 @@ Your sub task: {self.subtask}"""
             error_message=error_message,
             execution_time=execution_time
         )
-        
+
         action = AgentAction(
             agent_id=self.id if hasattr(self, 'id') else str(id(self)),
             agent_name=self.name,
             action_type=AgentActionType.TOOL_USE,
             tool_result=tool_result
         )
-        
+
         if not hasattr(self, 'captured_actions'):
             self.captured_actions = []
-        
+
         self.captured_actions.append(action)
-        
+
         return action
 
     def capture_thinking(self, thought_content):
@@ -347,12 +381,12 @@ Your sub task: {self.subtask}"""
             action_type=AgentActionType.THINKING,
             content=thought_content
         )
-        
+
         if not hasattr(self, 'captured_actions'):
             self.captured_actions = []
-        
+
         self.captured_actions.append(action)
-        
+
         return action
 
     def capture_final_answer(self, answer_content):
@@ -367,12 +401,12 @@ Your sub task: {self.subtask}"""
             action_type=AgentActionType.FINAL_ANSWER,
             content=answer_content
         )
-        
+
         if not hasattr(self, 'captured_actions'):
             self.captured_actions = []
-        
+
         self.captured_actions.append(action)
-        
+
         return action
 
 

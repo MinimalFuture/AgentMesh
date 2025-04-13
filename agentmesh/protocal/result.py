@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
-from enum import Enum
 import time
 import uuid
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import List, Dict, Any, Optional
 
 from agentmesh.protocal.task import Task, TaskStatus
 
@@ -80,22 +80,22 @@ class AgentExecutionResult:
     final_answer: str = ""
     start_time: float = field(default_factory=time.time)
     end_time: float = 0.0
-    
+
     @property
     def execution_time(self) -> float:
         """Calculate the total execution time."""
         if self.end_time > 0:
             return self.end_time - self.start_time
         return 0.0
-    
+
     def add_action(self, action: AgentAction) -> None:
         """Add an action to the agent's execution history."""
         self.actions.append(action)
-        
+
         # If this is a final answer, update the final_answer field
         if action.action_type == AgentActionType.FINAL_ANSWER:
             self.final_answer = action.content
-    
+
     def complete(self) -> None:
         """Mark the agent execution as complete."""
         self.end_time = time.time()
@@ -124,34 +124,34 @@ class TeamResult:
     start_time: float = field(default_factory=time.time)
     end_time: float = 0.0
     status: str = "running"
-    
+
     @property
     def execution_time(self) -> float:
         """Calculate the total execution time."""
         if self.end_time > 0:
             return self.end_time - self.start_time
         return 0.0
-    
+
     def add_agent_result(self, agent_result: AgentExecutionResult) -> None:
         """Add an agent result to the team run."""
         self.agent_results.append(agent_result)
-        
+
         # 更新最终输出为最新代理的最终答案（如果有）
         if agent_result.final_answer:
             self.final_output = agent_result.final_answer
-    
+
     def complete(self, status: str = "completed") -> None:
         """Mark the team run as complete."""
         self.end_time = time.time()
         self.status = status
-        
+
         # Update task status
         if self.task:
             if status == "completed":
                 self.task.update_status(TaskStatus.COMPLETED)
             elif status == "failed":
                 self.task.update_status(TaskStatus.FAILED)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the result to a dictionary for serialization."""
         return {
