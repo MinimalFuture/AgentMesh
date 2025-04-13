@@ -8,6 +8,7 @@ from agentmesh.models import LLMRequest, LLMModel
 from agentmesh.models.model_factory import ModelFactory
 from agentmesh.protocal.context import TeamContext, AgentOutput
 from agentmesh.tools.base_tool import BaseTool
+from agentmesh.protocal.result import AgentAction, AgentActionType, ToolResult
 
 
 class Agent:
@@ -106,6 +107,14 @@ Your sub task: {self.subtask}"""
         final_answer = None
         current_step = 0
         raw_response = ""
+        
+        # 初始化捕获的动作列表（如果不存在）
+        if not hasattr(self, 'captured_actions'):
+            self.captured_actions = []
+        
+        # 初始化最终答案（如果不存在）
+        if not hasattr(self, 'final_answer'):
+            self.final_answer = ""
 
         # Print agent name and subtask
         print(f"🤖 {self.name.strip()}: {self.subtask}")
@@ -205,18 +214,18 @@ Your sub task: {self.subtask}"""
 
         # Save final result
         result = final_answer if final_answer else raw_response
+        self.final_answer = result
         self.team_context.agent_outputs.append(
             AgentOutput(agent_name=self.name, output=result)
         )
 
-        # Decide whether to invoke another agent
-        self.should_invoke_next_agent()
+        return self.final_answer
 
-    def should_invoke_next_agent(self) -> bool:
+    def should_invoke_next_agent(self) -> int:
         """
         Determine if the next agent should be invoked based on the reply.
 
-        :return: True if the next agent should be invoked, False otherwise.
+        :return: The ID of the next agent to invoke, or -1 if no next agent should be invoked.
         """
         # Get the model to use - use team's model
         model_to_use = self.team_context.model
@@ -229,9 +238,9 @@ Your sub task: {self.subtask}"""
             if agent.name != self.name  # Exclude current agent
         )
         
-        # If no other agents are available, return False
+        # If no other agents are available, return -1
         if not agents_str:
-            return False
+            return -1
         
         agent_outputs_list = self._fetch_agents_outputs()
 
@@ -268,7 +277,7 @@ Your sub task: {self.subtask}"""
             
             # Check if we should stop the chain
             if selected_agent_id is None or int(selected_agent_id) < 0:
-                return False
+                return -1
             
             # Get subtask
             subtask = decision_res.get("subtask", "")
@@ -276,14 +285,14 @@ Your sub task: {self.subtask}"""
             # Map the selected agent ID to the actual agent ID
             selected_agent = self.team_context.agents[int(selected_agent_id)]
 
-            # Set subtask and call the next agent
+            # Set subtask for the next agent
             selected_agent.subtask = subtask
-            print()
-            selected_agent.step()
-            return True
+            
+            # Return the ID of the next agent
+            return int(selected_agent_id)
         except Exception as e:
             print(f"\n[Error] Failed to determine next agent: {e}")
-            return False
+            return -1
 
     def _fetch_agents_outputs(self) -> str:
         agent_outputs_list = []
@@ -291,6 +300,80 @@ Your sub task: {self.subtask}"""
             agent_outputs_list.append(
                 f"member name: {agent_output.agent_name}\noutput content: {agent_output.output}\n\n")
         return "\n".join(agent_outputs_list)
+
+    def capture_tool_use(self, tool_name, input_params, output, status, error_message=None, execution_time=0.0):
+        """
+        Capture a tool use action.
+        
+        :param tool_name: Name of the tool used
+        :param input_params: Parameters passed to the tool
+        :param output: Output from the tool
+        :param status: Status of the tool execution
+        :param error_message: Error message if the tool execution failed
+        :param execution_time: Time taken to execute the tool
+        """
+        tool_result = ToolResult(
+            tool_name=tool_name,
+            input_params=input_params,
+            output=output,
+            status=status,
+            error_message=error_message,
+            execution_time=execution_time
+        )
+        
+        action = AgentAction(
+            agent_id=self.id if hasattr(self, 'id') else str(id(self)),
+            agent_name=self.name,
+            action_type=AgentActionType.TOOL_USE,
+            tool_result=tool_result
+        )
+        
+        if not hasattr(self, 'captured_actions'):
+            self.captured_actions = []
+        
+        self.captured_actions.append(action)
+        
+        return action
+
+    def capture_thinking(self, thought_content):
+        """
+        Capture a thinking action.
+        
+        :param thought_content: Content of the thought
+        """
+        action = AgentAction(
+            agent_id=self.id if hasattr(self, 'id') else str(id(self)),
+            agent_name=self.name,
+            action_type=AgentActionType.THINKING,
+            content=thought_content
+        )
+        
+        if not hasattr(self, 'captured_actions'):
+            self.captured_actions = []
+        
+        self.captured_actions.append(action)
+        
+        return action
+
+    def capture_final_answer(self, answer_content):
+        """
+        Capture a final answer action.
+        
+        :param answer_content: Content of the final answer
+        """
+        action = AgentAction(
+            agent_id=self.id if hasattr(self, 'id') else str(id(self)),
+            agent_name=self.name,
+            action_type=AgentActionType.FINAL_ANSWER,
+            content=answer_content
+        )
+        
+        if not hasattr(self, 'captured_actions'):
+            self.captured_actions = []
+        
+        self.captured_actions.append(action)
+        
+        return action
 
 
 AGENT_REPLY_PROMPT = """You are part of the team, you only need to reply the part of user question related to your responsibilities

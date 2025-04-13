@@ -12,3 +12,6 @@ tests
 run_local_cases.py
 *.zip
 workspace/
+*.egg-info/
+build/
+dist/
