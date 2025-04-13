@@ -118,12 +118,17 @@ class TeamResult:
     """
     team_name: str
     task: Task
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    id: str = field(default=None)
     agent_results: List[AgentExecutionResult] = field(default_factory=list)
     final_output: str = ""
     start_time: float = field(default_factory=time.time)
     end_time: float = 0.0
     status: str = "running"
+
+    def __post_init__(self):
+        """Initialize id with task id if not provided"""
+        if self.id is None and self.task:
+            self.id = self.task.id
 
     @property
     def execution_time(self) -> float:

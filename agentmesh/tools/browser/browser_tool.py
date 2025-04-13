@@ -13,6 +13,17 @@ from agentmesh.models import LLMRequest
 from agentmesh.models.model_factory import ModelFactory
 from browser_use.dom.service import DomService
 
+# 使用延迟导入，只在实际使用时才导入
+def _import_browser_use():
+    try:
+        import browser_use
+        return browser_use
+    except ImportError:
+        raise ImportError(
+            "The 'browser-use' package is required to use BrowserTool. "
+            "Please install it with 'pip install browser-use>=0.1.40' or "
+            "'pip install agentmesh-sdk[full]'."
+        )
 
 def _get_action_prompt():
     action_classes = [Navigate, ClickElement, ExtractContent, InputText, OpenTab, SwitchTab, ScrollDown, ScrollUp]
@@ -71,6 +82,8 @@ class BrowserTool(BaseTool):
     _event_loop = None
 
     def __init__(self):
+        # 只在初始化时导入，而不是在模块级别导入
+        self.browser_use = _import_browser_use()
         # Do not initialize the browser in the constructor, but initialize it on the first execution
         pass
 
@@ -96,6 +109,9 @@ class BrowserTool(BaseTool):
         :param params: Dictionary containing the action and related parameters
         :return: Result of the browser operation
         """
+        # 确保已导入 browser_use
+        if not hasattr(self, 'browser_use'):
+            self.browser_use = _import_browser_use()
         action = params.get("operation", "").lower()
 
         try:

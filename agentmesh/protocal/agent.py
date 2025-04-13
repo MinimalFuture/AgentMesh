@@ -37,7 +37,6 @@ class Agent:
         self.conversation_history = []
         self.action_history = []
         self.ext_data = ""
-        self.tools = []
         self.output_mode = output_mode
         if tools:
             for tool in tools:

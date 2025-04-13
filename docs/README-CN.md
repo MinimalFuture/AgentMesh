@@ -3,7 +3,8 @@
 
 <a href="/README.md">English</a> | 中文
 
-AgentMesh是一个 **多智能体 (Multi-agent) 平台** ，提供AI Agent开发框架、多Agent间的通信协议、复杂任务规划和自主决策。 基于该平台可以快速构建你的Agent Team，通过Agents之间的协作完成任务。
+AgentMesh是一个 **多智能体 (Multi-agent) 平台** ，提供AI Agent开发框架、多Agent间的通信协议、复杂任务规划和自主决策。
+基于该平台可以快速构建你的Agent Team，通过Agents之间的协作完成任务。
 
 # 快速开始
 
@@ -50,7 +51,6 @@ pip install browser-use
 playwright install
 ```
 
-
 ### 2.配置
 
 配置文件为根目录下的 `config.yaml`，包含模型配置和Agent配置，可以从模板文件复制后修改：
@@ -73,7 +73,6 @@ python main.py -t software_team
 
 进入交互页面后输入需求内容即可开始运行。
 
-
 ## 二、 SDK开发
 
 `Agentmesh`的核心协议部分通过SDK提供，开发者可基于该SDK构建一个多智能体团队。
@@ -81,7 +80,7 @@ python main.py -t software_team
 安装SDK依赖:
 
 ```bash
-pip install agentmesh
+pip install agentmesh-sdk
 ```
 
 以下是一个简单的使用示例：
@@ -100,12 +99,12 @@ team.add(Agent(name="Developer", description="Implements code based on PRD and a
                system_prompt="You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements and architecture guidelines precisely",
                tools=[Calculator(), BrowserTool()]))
 
-team.add(Agent(name="PM", description="Responsible for product requirements and documentation", system_prompt="You are an experienced product manager who creates clear and comprehensive PRDs")
+team.add(Agent(name="PM", description="Responsible for product requirements and documentation",
+               system_prompt="You are an experienced product manager who creates clear and comprehensive PRDs")
 
 # run user task
 team.run(task="Write a Snake client game")
 ```
-
 
 ## 三、Web服务运行
 

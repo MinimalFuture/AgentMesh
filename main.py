@@ -1,5 +1,6 @@
 import argparse
 
+from agentmesh.common import logger
 from agentmesh.common import load_config, config, ModelFactory
 from agentmesh.protocal import AgentTeam, Agent, Task
 from agentmesh.tools.tool_manager import ToolManager
@@ -59,7 +60,14 @@ def create_team_from_config(team_name):
             if tool:
                 agent.add_tool(tool)
             else:
-                print(f"Warning: Tool '{tool_name}' not found for agent '{agent.name}'")
+                if tool_name == "browser":
+                    logger.warning(
+                        "Tool 'Browser' loaded failed, "
+                        "please install the required dependency with: \n"
+                        "'pip install browser-use>=0.1.40' or 'pip install agentmesh-sdk[full]'\n"
+                    )
+                else:
+                    logger.warning(f"Tool '{tool_name}' not found for agent '{agent.name}'\n")
 
         # Add agent to team
         team.add(agent)

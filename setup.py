@@ -1,13 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 setup(
     name="agentmesh-sdk",
-    version="0.0.1-dev",
+    version="0.0.1.dev1",
     author="Minimal Future",
     author_email="zyj@zhayujie.com",
     description="An open-source multi-agent framework for building agent teams with LLMs",
     url="https://github.com/MinimalFuture/AgentMesh",
-    packages=find_packages(),
+    packages=find_namespace_packages(include=["agentmesh*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
