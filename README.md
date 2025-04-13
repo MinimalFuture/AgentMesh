@@ -2,111 +2,95 @@
 
 English | <a href="/docs/README-CN.md">中文</a>
 
-AgentMesh is a **Multi-Agent platform** that provides an AI Agent development framework, communication protocols between
-multiple Agents, complex task planning, and autonomous decision-making. With this platform, you can quickly build your
-Agent Team to accomplish tasks through collaboration between Agents.
+AgentMesh is a **Multi-Agent platform** for AI agents development, providing a framework for inter-agent communication,
+task planning, and autonomous decision-making. Build your agent team quickly and solve complex tasks through agent
+collaboration.
 
 # Quick Start
 
-There are three ways to quickly build and run your Agent Team:
+Choose one of these three ways to build and run your agent team:
 
-## 1. Terminal Execution
+## 1. Terminal
 
-Run a multi-agent team in the terminal command line:
+Run a multi-agent team from your command line:
 
 ### 1.1 Installation
 
-Download the source code and enter the project directory:
+**Requirements:** Linux, MacOS, or Windows with Python installed.
 
-```bash
+> Python 3.7+ required, 3.11+ recommended (especially for browser tools).
+> Download from: [Python.org](https://www.python.org/downloads/).
+
+Clone the repo and navigate to the project:
+
+```
 git clone https://github.com/MinimalFuture/AgentMesh
 cd AgentMesh
 ```
 
-Install Python 3.7 or above, Python 3.11+ is recommended (browser tools require Python 3.11+).
+Install core dependencies:
 
-We recommend using the Python virtual environment tool `uv` for one-click installation and execution. First, download
-uv:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-
-Create a virtual environment:
-
-```bash
-uv venv --python 3.11
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
 
-If you need to use browser tools, you also need to install (optional):
+For browser tools, install additional dependencies (optional):
 
-```bash
+```
 pip install browser-use
 playwright install
 ```
 
 ### 1.2 Configuration
 
-The configuration file is `config.yaml` in the root directory, which includes model configuration and Agent
-configuration. You can copy from the template file and modify it:
+Edit the `config.yaml` file with your model settings and agent configurations:
 
-```bash
+```
 cp config-template.yaml config.yaml
 ```
 
-Fill in the `api_key` for the models you need. AgentMesh supports `openai`, `claude`, `deepseek`, and other models.
+Add your model `api_key` - AgentMesh supports `openai`, `claude`, `deepseek`, `qwen`, and others.
 
-The configuration template includes a pre-configured Agent development team called `software_team`, which consists of
-three roles: product manager, architect, and engineer, who can collaborate to complete software development tasks.
+> The template includes a pre-configured `software_team` with three roles (PM, architect, engineer) that collaborate on
+> software development tasks.
 
 ### 1.3 Execution
 
-Run the `software_team` example:
-
-```bash
-python main.py -t software_team
+```
+python main.py -l                   # List available agent teams
+python main.py -t software_team     # Run the 'software_team'
 ```
 
-Enter your requirements in the interactive page to start the process.
+Enter your requirements in the interactive prompt to begin.
 
-## 2. SDK Development
+## 2. SDK
 
-The core protocol part of `AgentMesh` is provided through an SDK, allowing developers to build a multi-agent team based
-on this SDK.
+Use the AgentMesh SDK to build custom agent teams programmatically:
 
-Install the SDK dependency:
-
-```bash
+```
 pip install agentmesh-sdk
 ```
 
-Here's a simple usage example:
+Example usage (replace `YOUR_API_KEY` with your actual API key):
 
 ```python
 from agentmesh import AgentTeam, Agent, LLMModel
 from agentmesh.tools import *
 
-# model
-model = LLMModel(model="gpt-4o", api_key="YOUR_API_KEY")
+# Initialize model
+model = LLMModel(model="gpt-4o", api_key="YOUR_API_KEY")  # Replace with your actual API key
 
-# team build and add agents
+# Create team and add agents
 team = AgentTeam(name="software_team", description="A software development team", model=model)
 
-team.add(Agent(name="Developer", description="Implements code based on PRD and architecture design", model=model,
-               system_prompt="You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements and architecture guidelines precisely",
-               tools=[Calculator(), BrowserTool()]))
+team.add(Agent(name="PM", description="Handles product requirements",
+               system_prompt="You are an experienced PM who creates clear, comprehensive PRDs"))
 
-team.add(Agent(name="PM", description="Responsible for product requirements and documentation",
-               system_prompt="You are an experienced product manager who creates clear and comprehensive PRDs"))
+team.add(Agent(name="Developer", description="Implements code based on requirements", model=model,
+               system_prompt="You write clean, efficient, maintainable code following requirements precisely",
+               tools=[Calculator(), GoogleSearch()]))
 
-# run user task
+# Execute task
 team.run(task="Write a Snake client game")
 ```
 

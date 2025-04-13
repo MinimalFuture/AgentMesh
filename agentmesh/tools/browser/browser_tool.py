@@ -12,8 +12,10 @@ from agentmesh.tools.browser.browser_action import *
 from agentmesh.models import LLMRequest
 from agentmesh.models.model_factory import ModelFactory
 from browser_use.dom.service import DomService
+from agentmesh.common import logger
 
-# 使用延迟导入，只在实际使用时才导入
+
+# Use lazy import, only import when actually used
 def _import_browser_use():
     try:
         import browser_use
@@ -24,6 +26,7 @@ def _import_browser_use():
             "Please install it with 'pip install browser-use>=0.1.40' or "
             "'pip install agentmesh-sdk[full]'."
         )
+
 
 def _get_action_prompt():
     action_classes = [Navigate, ClickElement, ExtractContent, InputText, OpenTab, SwitchTab, ScrollDown, ScrollUp]
@@ -82,7 +85,7 @@ class BrowserTool(BaseTool):
     _event_loop = None
 
     def __init__(self):
-        # 只在初始化时导入，而不是在模块级别导入
+        # Only import during initialization, not at module level
         self.browser_use = _import_browser_use()
         # Do not initialize the browser in the constructor, but initialize it on the first execution
         pass
@@ -93,7 +96,8 @@ class BrowserTool(BaseTool):
             os.environ['BROWSER_USE_LOGGING_LEVEL'] = 'error'
             print("Initializing browser...")
             # Initialize the browser synchronously
-            BrowserTool.browser = Browser(BrowserConfig(headless=False, disable_security=True))  # Set to non-headless mode to see the browser window
+            BrowserTool.browser = Browser(BrowserConfig(headless=False,
+                                                        disable_security=True))  # Set to non-headless mode to see the browser window
             context_config = BrowserContextConfig()
             context_config.highlight_elements = True
             BrowserTool.browser_context = await BrowserTool.browser.new_context(context_config)
@@ -109,7 +113,7 @@ class BrowserTool(BaseTool):
         :param params: Dictionary containing the action and related parameters
         :return: Result of the browser operation
         """
-        # 确保已导入 browser_use
+        # Ensure browser_use is imported
         if not hasattr(self, 'browser_use'):
             self.browser_use = _import_browser_use()
         action = params.get("operation", "").lower()
@@ -192,9 +196,10 @@ The following is the information of the current browser page. Each serial number
                 response = model.call(request)
                 extract_content = response["choices"][0]["message"]["content"]
                 print(f"Extract from page: {extract_content}")
-                return ToolResult.success(result=f"Extract from page: {extract_content}", ext_data=await self._get_page_info(context))
+                return ToolResult.success(result=f"Extract from page: {extract_content}",
+                                          ext_data=await self._get_page_info(context))
             except Exception as e:
-                print(e)
+                logger.error(e)
 
         elif action == ClickElement.code:
             index = params.get("index")

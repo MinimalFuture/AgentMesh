@@ -72,5 +72,4 @@ class CurrentTime(BaseTool):
             }
             return ToolResult.success(result=result)
         except Exception as e:
-            print(e)
             return ToolResult.fail(result=str(e))

@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Dict
 from agentmesh.tools.base_tool import BaseTool
 from agentmesh.common import config
-from agentmesh.common.utils.log import logger  # 导入日志模块
+from agentmesh.common.utils.log import logger  # Import the logging module
 
 
 class ToolManager:
     """
-    A manager for loading and accessing tools.
+    Tool manager for managing tools.
     """
     _instance = None
 
@@ -55,12 +55,12 @@ class ToolManager:
             try:
                 module = importlib.import_module(f"agentmesh.{module_name}")  # Ensure the correct base package
             except ModuleNotFoundError as e:
-                # 如果是 browser_use 依赖缺失，静默忽略
+                # If browser_use dependency is missing, silently ignore
                 if "browser_use" in str(e):
-                    # 可选：打印更友好的消息
+                    # Optional: Print a more friendly message
                     # print(f"Skipping optional tool {module_name}: {e}")
                     continue
-                # 其他导入错误仍然打印
+                # Other import errors are printed
                 print(f"Error importing module {module_name}: {e}")
                 continue
 
@@ -77,9 +77,9 @@ class ToolManager:
                     except TypeError as e:
                         print(f"Error initializing tool {cls.__name__}: {e}")
                     except ImportError as e:
-                        # 捕获工具初始化时的导入错误
+                        # Catch tool initialization import errors
                         if "browser_use" in str(e):
-                            # 可选：打印更友好的消息
+                            # Optional: Print a more friendly message
                             # print(f"Skipping optional tool {cls.__name__}: {e}")
                             pass
                         else:
@@ -91,7 +91,7 @@ class ToolManager:
             # Get tools configuration
             tools_config = config().get("tools", {})
 
-            # 记录已配置但未加载的工具
+            # Record tools that are configured but not loaded
             missing_tools = []
 
             # Update tool configurations if they exist
@@ -99,10 +99,10 @@ class ToolManager:
                 if tool_name in self.tools:
                     self.tools[tool_name].config = tool_config
                 else:
-                    # 工具在配置中但未成功加载
+                    # Tool is configured but not successfully loaded
                     missing_tools.append(tool_name)
 
-            # 如果有缺失的工具，记录警告
+            # If there are missing tools, record warnings
             if missing_tools:
                 for tool_name in missing_tools:
                     if tool_name == "browser":

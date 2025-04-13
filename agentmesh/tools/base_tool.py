@@ -1,6 +1,7 @@
 from typing import Any
 from pydantic import BaseModel, Field
 from agentmesh.models.llm.base_model import LLMModel
+from agentmesh.common import logger
 
 
 class ToolResult(BaseModel):
@@ -14,7 +15,7 @@ class ToolResult(BaseModel):
 
     @staticmethod
     def fail(result, ext_data: Any = None):
-        return ToolResult(status="success", result=result, ext_data=ext_data)
+        return ToolResult(status="error", result=result, ext_data=ext_data)
 
 
 class BaseTool:
@@ -37,7 +38,7 @@ class BaseTool:
         try:
             return self.execute(params)
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def execute(self, params: dict) -> ToolResult:
         """Specific logic to be implemented by subclasses"""

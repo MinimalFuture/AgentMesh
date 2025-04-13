@@ -72,7 +72,7 @@ python main.py -t software_team     # 运行名为 'software_team' 的team
 pip install agentmesh-sdk
 ```
 
-以下是一个简单的使用示例，填写 `api_key` 后即可运行：
+以下是一个简单的使用示例，使用前请替换 `YOUR_API_KEY` 为你的实际API密钥：
 
 ```python
 from agentmesh import AgentTeam, Agent, LLMModel

@@ -59,7 +59,7 @@ class AgentTeam:
             if output_mode == "print":
                 print(message, end=end)
             elif message:
-                logger.info(message)
+                logger.info(message.strip())
 
         # Convert string task to Task object if needed
         if isinstance(task, str):
@@ -221,7 +221,7 @@ class AgentTeam:
                 result.complete("completed")
 
                 # Print task completion information
-                output(f"Team {self.name} completed the task")
+                output(f"\nTeam {self.name} completed the task")
 
                 return result
             else:

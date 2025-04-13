@@ -36,10 +36,13 @@ class GoogleSearch(BaseTool):
         response = requests.post(url, headers=headers, json=data)
         result = response.json()
 
-        # Check if the returned result contains the 'organic' key and ensure it is a list
-        if 'organic' in result and isinstance(result.get('organic'), list):
-            result_data = result['organic']
+        if result.get("statusCode") and result.get("statusCode") == 503:
+            return ToolResult.fail(result=result)
         else:
-            # If there are no organic results, return the full response or an empty list
-            result_data = result.get('organic', []) if isinstance(result.get('organic'), list) else []
-        return ToolResult.success(result=result_data)
+            # Check if the returned result contains the 'organic' key and ensure it is a list
+            if 'organic' in result and isinstance(result.get('organic'), list):
+                result_data = result['organic']
+            else:
+                # If there are no organic results, return the full response or an empty list
+                result_data = result.get('organic', []) if isinstance(result.get('organic'), list) else []
+            return ToolResult.success(result=result_data)

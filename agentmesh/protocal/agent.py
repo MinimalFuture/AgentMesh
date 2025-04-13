@@ -33,7 +33,7 @@ class Agent:
         self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
         self.tools: list = []
-        self.max_react_steps = 20  # max ReAct steps
+        self.max_react_steps = 10  # max ReAct steps
         self.conversation_history = []
         self.action_history = []
         self.ext_data = ""
@@ -242,6 +242,11 @@ Your sub task: {self.subtask}"""
                         "status": tool_result.status,
                         "result": tool_result.result
                     }
+
+                    # Log tool execution errors
+                    if tool_result.status == "error":
+                        logger.error(f"Tool execution error: {tool_result.result}")
+
                     if tool_result.ext_data:
                         self.ext_data = tool_result.ext_data
                 self.action_history.append(parsed)

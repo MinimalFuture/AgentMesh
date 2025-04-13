@@ -8,13 +8,13 @@ from agentmesh.tools.calculator.calculator import Calculator
 from agentmesh.tools.current_time.current_time import CurrentTime
 from agentmesh.tools.file_output.file_output import FileOutput
 
-# 延迟导入 BrowserTool
+# Delayed import for BrowserTool
 def _import_browser_tool():
     try:
         from agentmesh.tools.browser.browser_tool import BrowserTool
         return BrowserTool
     except ImportError:
-        # 返回一个占位符类，在实例化时会提示用户安装依赖
+        # Return a placeholder class that will prompt the user to install dependencies when instantiated
         class BrowserToolPlaceholder:
             def __init__(self, *args, **kwargs):
                 raise ImportError(
@@ -24,7 +24,7 @@ def _import_browser_tool():
                 )
         return BrowserToolPlaceholder
 
-# 动态设置 BrowserTool
+# Dynamically set BrowserTool
 BrowserTool = _import_browser_tool()
 
 # Export all tools
@@ -37,3 +37,7 @@ __all__ = [
     'FileOutput',
     'BrowserTool'
 ]
+
+"""
+Tools module for AgentMesh.
+"""
