@@ -5,8 +5,9 @@ WORKDIR /app
 # Copy project files
 COPY . /app/
 
-# Make entrypoint script executable
-RUN chmod +x entrypoint.sh
+# Copy and make entrypoint script executable
+COPY docker/entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
 # Install dependencies
 RUN pip install --no-cache-dir -e .
@@ -14,11 +15,9 @@ RUN pip install --no-cache-dir -e .
 # Create configuration directory
 RUN mkdir -p /config
 
-# Set environment variable pointing to config file
+# Set environment variables
 ENV CONFIG_PATH=/app/config.yaml
+ENV DOCKER_CONTAINER=true
 
 # Set entrypoint
 CMD ["/app/entrypoint.sh"]
-
-# 添加环境变量标识Docker容器环境
-ENV DOCKER_CONTAINER=true
