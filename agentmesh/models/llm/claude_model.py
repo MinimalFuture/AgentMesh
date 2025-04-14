@@ -1,20 +1,20 @@
-from agentmesh.models.llm.base_model import LLMModel, LLMRequest
+from agentmesh.models.llm.base_model import LLMModel, LLMRequest, LLMResponse
 from agentmesh.common.enums import ModelApiBase
 import requests
 import json
 
 
 class ClaudeModel(LLMModel):
-    def __init__(self, model: str, api_key: str, api_base: str):
+    def __init__(self, model: str, api_key: str, api_base: str = None):
         api_base = api_base or ModelApiBase.CLAUDE.value
         super().__init__(model, api_key=api_key, api_base=api_base)
 
-    def call(self, request: LLMRequest):
+    def call(self, request: LLMRequest) -> LLMResponse:
         """
         Call the Claude API with the given request parameters.
 
         :param request: An instance of LLMRequest containing parameters for the API call.
-        :return: The response from the Claude API, reformatted to match OpenAI's format.
+        :return: An LLMResponse object containing the response or error information.
         """
         headers = {
             "x-api-key": self.api_key,
@@ -44,8 +44,6 @@ class ClaudeModel(LLMModel):
         if system_prompt:
             data["system"] = system_prompt
 
-        # Add response format if JSON is requested
-
         try:
             response = requests.post(
                 f"{self.api_base}/messages",
@@ -53,38 +51,72 @@ class ClaudeModel(LLMModel):
                 json=data
             )
 
-            # Convert Claude response to OpenAI format
-            claude_response = response.json()
+            # Check if the request was successful
+            if response.status_code == 200:
+                claude_response = response.json()
 
-            # Format the response to match OpenAI's structure
-            openai_format_response = {
-                "id": claude_response.get("id", ""),
-                "object": "chat.completion",
-                "created": int(claude_response.get("created_at", 0)),
-                "model": self.model,
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": claude_response.get("content", [{}])[0].get("text", "")
-                        },
-                        "finish_reason": claude_response.get("stop_reason", "stop")
+                # Format the response to match OpenAI's structure
+                openai_format_response = {
+                    "id": claude_response.get("id", ""),
+                    "object": "chat.completion",
+                    "created": int(claude_response.get("created_at", 0)),
+                    "model": self.model,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": claude_response.get("content", [{}])[0].get("text", "")
+                            },
+                            "finish_reason": claude_response.get("stop_reason", "stop")
+                        }
+                    ],
+                    "usage": {
+                        "prompt_tokens": claude_response.get("usage", {}).get("input_tokens", 0),
+                        "completion_tokens": claude_response.get("usage", {}).get("output_tokens", 0),
+                        "total_tokens": claude_response.get("usage", {}).get("input_tokens", 0) +
+                                        claude_response.get("usage", {}).get("output_tokens", 0)
                     }
-                ],
-                "usage": {
-                    "prompt_tokens": claude_response.get("usage", {}).get("input_tokens", 0),
-                    "completion_tokens": claude_response.get("usage", {}).get("output_tokens", 0),
-                    "total_tokens": claude_response.get("usage", {}).get("input_tokens", 0) +
-                                    claude_response.get("usage", {}).get("output_tokens", 0)
                 }
-            }
 
-            return openai_format_response
+                return LLMResponse(success=True, data=openai_format_response, status_code=response.status_code)
+            else:
+                # Try to extract error message from response
+                error_msg = "Unknown error"
+                try:
+                    error_data = response.json()
+                    if "error" in error_data:
+                        if isinstance(error_data["error"], dict) and "message" in error_data["error"]:
+                            error_msg = error_data["error"]["message"]
+                        else:
+                            error_msg = str(error_data["error"])
+                    elif "message" in error_data:
+                        error_msg = error_data["message"]
+                    else:
+                        error_msg = response.text
+                except:
+                    error_msg = response.text or "Could not parse error response"
 
+                return LLMResponse(
+                    success=False,
+                    error_message=error_msg,
+                    status_code=response.status_code
+                )
+
+        except requests.RequestException as e:
+            # Handle connection errors, timeouts, etc.
+            return LLMResponse(
+                success=False,
+                error_message=f"Request failed: {str(e)}",
+                status_code=0  # Use 0 for connection errors
+            )
         except Exception as e:
-            print(f"Error calling Claude API: {e}")
-            return {"error": str(e)}
+            # Handle any other exceptions
+            return LLMResponse(
+                success=False,
+                error_message=f"Unexpected error: {str(e)}",
+                status_code=500
+            )
 
     def call_stream(self, request: LLMRequest):
         """
@@ -134,6 +166,31 @@ class ClaudeModel(LLMModel):
                 stream=True
             )
 
+            # Check for error response
+            if response.status_code != 200:
+                # Try to extract error message
+                try:
+                    error_data = json.loads(response.text)
+                    if "error" in error_data:
+                        if isinstance(error_data["error"], dict) and "message" in error_data["error"]:
+                            error_msg = error_data["error"]["message"]
+                        else:
+                            error_msg = str(error_data["error"])
+                    elif "message" in error_data:
+                        error_msg = error_data["message"]
+                    else:
+                        error_msg = response.text
+                except:
+                    error_msg = response.text or "Unknown error"
+
+                # Yield an error object that can be detected by the caller
+                yield {
+                    "error": True,
+                    "status_code": response.status_code,
+                    "message": error_msg
+                }
+                return
+
             for line in response.iter_lines():
                 if line:
                     line = line.decode('utf-8')
@@ -166,8 +223,20 @@ class ClaudeModel(LLMModel):
                             }
                         except json.JSONDecodeError:
                             continue
+        except requests.RequestException as e:
+            # Yield an error object for connection errors
+            yield {
+                "error": True,
+                "status_code": 0,
+                "message": f"Connection error: {str(e)}"
+            }
         except Exception as e:
-            print(f"Streaming error with Claude API: {e}")
+            # Yield an error object for unexpected errors
+            yield {
+                "error": True,
+                "status_code": 500,
+                "message": f"Unexpected error: {str(e)}"
+            }
 
     def _get_max_tokens(self) -> int:
         model = self.model

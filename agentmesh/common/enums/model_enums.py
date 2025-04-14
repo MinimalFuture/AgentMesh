@@ -9,7 +9,7 @@ class ModelProvider(Enum):
     CLAUDE = "claude"
     DEEPSEEK = "deepseek"
     QWEN = "qwen"
-    UNKNOWN = "unknown"
+    COMMON = "common"
 
     @classmethod
     def from_model_name(cls, model_name: str) -> "ModelProvider":
@@ -28,8 +28,8 @@ class ModelProvider(Enum):
         elif model_name.startswith(("qwen", "qwq")):
             return cls.QWEN
         else:
-            # Default to OpenAI if no match
-            return cls.UNKNOWN
+            # Default to common provider if no match
+            return cls.COMMON
 
 
 class ModelApiBase(Enum):

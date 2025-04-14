@@ -194,10 +194,13 @@ The following is the information of the current browser page. Each serial number
                 )
                 model = self.model or ModelFactory().get_model(model_name="gpt-4o")
                 response = model.call(request)
-                extract_content = response["choices"][0]["message"]["content"]
-                print(f"Extract from page: {extract_content}")
-                return ToolResult.success(result=f"Extract from page: {extract_content}",
-                                          ext_data=await self._get_page_info(context))
+                if response.success:
+                    extract_content = response.data["choices"][0]["message"]["content"]
+                    print(f"Extract from page: {extract_content}")
+                    return ToolResult.success(result=f"Extract from page: {extract_content}",
+                                              ext_data=await self._get_page_info(context))
+                else:
+                    return ToolResult.fail(result=f"Extract from page failed: {response.get_error_msg()}")
             except Exception as e:
                 logger.error(e)
 

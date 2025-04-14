@@ -1,6 +1,7 @@
 from typing import Optional
 
 from agentmesh.common import config
+from agentmesh.common.enums import ModelProvider, ModelApiBase
 from agentmesh.models.llm.base_model import LLMModel
 from agentmesh.models.llm.claude_model import ClaudeModel
 from agentmesh.models.llm.deepseek_model import DeepSeekModel
@@ -31,14 +32,15 @@ class ModelFactory:
 
         # Strategy 2: Determine provider based on model name prefix
         if model_name.startswith(("gpt", "text-davinci", "o1")):
-            return "openai"
+            return ModelProvider.OPENAI.value
         elif model_name.startswith("claude"):
-            return "claude"
+            return ModelProvider.CLAUDE.value
         elif model_name.startswith("deepseek"):
-            return "deepseek"
-
+            return ModelProvider.DEEPSEEK.value
+        elif model_name.startswith(("qwen", "qwq")):
+            return ModelProvider.QWEN.value
         # Strategy 3: Default to openai if no match
-        return "openai"
+        return ModelProvider.COMMON.value
 
     def get_model(self, model_name: str, model_provider: Optional[str] = None,
                   api_base: Optional[str] = None, api_key: Optional[str] = None) -> LLMModel:
@@ -59,11 +61,14 @@ class ModelFactory:
             api_base = api_base or model_config.get("api_base")
             api_key = api_key or model_config.get("api_key")
 
-        if provider == "openai":
+        if provider == ModelProvider.OPENAI.value:
             return OpenAIModel(model=model_name, api_base=api_base, api_key=api_key)
-        elif provider == "claude":
-            return ClaudeModel(model=model_name, api_base=api_base, api_key=api_key)
-        elif provider == "deepseek":
+        elif provider == ModelProvider.CLAUDE.value:
+            if not api_base or api_base == ModelApiBase.CLAUDE.value:
+                return ClaudeModel(model=model_name, api_base=api_base, api_key=api_key)
+            else:
+                return LLMModel(model=model_name, api_base=api_base, api_key=api_key)
+        elif provider == ModelProvider.DEEPSEEK.value:
             return DeepSeekModel(model=model_name, api_base=api_base, api_key=api_key)
         else:
             # Default to base LLMModel if provider is not recognized
