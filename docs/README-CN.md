@@ -18,8 +18,8 @@ AgentMesh是一个 **多智能体 (Multi-agent) 平台** ，提供AI Agent开发
 
 **环境准备：** 支持 Linux、MacOS、Windows 系统，需要安装 python。
 
-> python 版本要求 3.7 以上，推荐使用 python3.11+ (如需使用浏览器工具)
-> 。下载地址：[python官网](https://www.python.org/downloads/)。
+> python 版本推荐使用 3.11+ (如需使用浏览器工具)，至少需要 3.7
+> 以上。下载地址：[python官网](https://www.python.org/downloads/)。
 
 下载项目源码并进入项目目录：
 
@@ -34,7 +34,7 @@ cd AgentMesh
 pip install -r requirements.txt
 ```
 
-如需使用浏览器工具，还需要额外安装依赖 (可选):
+如需使用浏览器工具，还需要额外安装依赖 (可选，需要 python3.11+):
 
 ```bash
 pip install browser-use

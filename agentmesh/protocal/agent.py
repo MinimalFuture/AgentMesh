@@ -221,20 +221,20 @@ Your sub task: {self.subtask}"""
                 # Log the parsed data in a structured way
                 if "thought" in parsed:
                     logger.info(f"🧠 {parsed['thought']}")
-                if "action" in parsed and parsed["action"] and parsed["action"].lower() != "null":
+                if "action" in parsed and parsed["action"] and parsed["action"].lower() not in ["null", "none"]:
                     action_input = parsed.get("action_input", {})
                     action_input_str = json.dumps(action_input, ensure_ascii=False) if action_input else ""
                     logger.info(f"🛠️ {parsed['action']}: {action_input_str}")
-                if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() != "null":
+                if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in ["null", "none"]:
                     logger.info(f"💬 {parsed['final_answer']}")
 
             # Handle final answer
-            if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() != "null":
+            if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in ["null", "none"]:
                 final_answer = parsed["final_answer"]
                 break
 
             # Handle tool invocation
-            if "action" in parsed and parsed["action"] and parsed["action"].lower() != "null":
+            if "action" in parsed and parsed["action"] and parsed["action"].lower() not in ["null", "none"]:
                 # Execute tool
                 tool: BaseTool = self._find_tool(parsed["action"])
                 observation = ""

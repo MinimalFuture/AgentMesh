@@ -128,9 +128,13 @@ def main():
     print(f"Number of agents: {len(team.agents)}")
     print("\nEnter your task (type 'exit' to quit):")
 
+    count = 0
     # Interactive loop
     while True:
         try:
+            if count > 0:
+                team = create_team_from_config(args.team)
+            count += 1
             user_input = input("> ")
             if user_input.lower() in ["exit", "quit", "q"]:
                 print("Exiting AgentMesh. Goodbye!")
@@ -144,7 +148,7 @@ def main():
             print("\nExiting AgentMesh. Goodbye!")
             break
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
 
 
 if __name__ == "__main__":

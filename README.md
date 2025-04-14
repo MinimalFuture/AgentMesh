@@ -18,25 +18,25 @@ Run a multi-agent team from your command line:
 
 **Requirements:** Linux, MacOS, or Windows with Python installed.
 
-> Python 3.7+ required, 3.11+ recommended (especially for browser tools).
+> Python 3.11+ recommended (especially for browser tools), at least python 3.7+ required.
 > Download from: [Python.org](https://www.python.org/downloads/).
 
 Clone the repo and navigate to the project:
 
-```
+```bash
 git clone https://github.com/MinimalFuture/AgentMesh
 cd AgentMesh
 ```
 
 Install core dependencies:
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
-For browser tools, install additional dependencies (optional):
+For browser tools, install additional dependencies (optional, python3.11+ required):
 
-```
+```bash
 pip install browser-use
 playwright install
 ```
@@ -45,7 +45,7 @@ playwright install
 
 Edit the `config.yaml` file with your model settings and agent configurations:
 
-```
+```bash
 cp config-template.yaml config.yaml
 ```
 
@@ -56,7 +56,7 @@ Add your model `api_key` - AgentMesh supports `openai`, `claude`, `deepseek`, `q
 
 ### 1.3 Execution
 
-```
+```bash
 python main.py -l                   # List available agent teams
 python main.py -t software_team     # Run the 'software_team'
 ```
@@ -67,7 +67,7 @@ Enter your requirements in the interactive prompt to begin.
 
 Use the AgentMesh SDK to build custom agent teams programmatically:
 
-```
+```bash
 pip install agentmesh-sdk
 ```
 

@@ -223,38 +223,40 @@ class XmlResParser:
         if "action" in result and not self.is_null_content["action"]:
             action_content = result["action"].strip()
 
-            # If action is not null, print action and action_input
-            if "action_input" in result:
-                action_input_content = result["action_input"].strip()
+            # Check if action is null, None, or empty before printing
+            if action_content.lower() not in ["null", "none"] and action_content != "":
+                # If action is not null, print action and action_input
+                if "action_input" in result:
+                    action_input_content = result["action_input"].strip()
 
-                try:
-                    # Attempt to parse JSON
-                    if action_input_content.startswith("{"):
-                        action_input_json = json.loads(action_input_content)
-                        result["action_input"] = action_input_json
-                        # Print action and action_input
-                        print(
-                            f"\n{self.emoji_map['action']} {action_content}: {json.dumps(action_input_json, ensure_ascii=False)}")
-                    # If it is "null" or empty, set to empty dictionary
-                    elif action_input_content.lower() in ["null", ""]:
-                        result["action_input"] = {}
-                        # Print only action
-                        print(f"\n{self.emoji_map['action']} {action_content}")
-                    else:
-                        # Print action and action_input
+                    try:
+                        # Attempt to parse JSON
+                        if action_input_content.startswith("{"):
+                            action_input_json = json.loads(action_input_content)
+                            result["action_input"] = action_input_json
+                            # Print action and action_input
+                            print(
+                                f"\n{self.emoji_map['action']} {action_content}: {json.dumps(action_input_json, ensure_ascii=False)}")
+                        # If it is "null", "none" or empty, set to empty dictionary
+                        elif action_input_content.lower() in ["null", "none", ""]:
+                            result["action_input"] = {}
+                            # Print only action
+                            print(f"\n{self.emoji_map['action']} {action_content}")
+                        else:
+                            # Print action and action_input
+                            print(f"\n{self.emoji_map['action']} {action_content}: {action_input_content}")
+                    except json.JSONDecodeError:
+                        # JSON parsing failed, keep as is
                         print(f"\n{self.emoji_map['action']} {action_content}: {action_input_content}")
-                except json.JSONDecodeError:
-                    # JSON parsing failed, keep as is
-                    print(f"\n{self.emoji_map['action']} {action_content}: {action_input_content}")
-            else:
-                # No action_input, print only action
-                print(f"\n{self.emoji_map['action']} {action_content}")
+                else:
+                    # No action_input, print only action
+                    print(f"\n{self.emoji_map['action']} {action_content}")
 
         # Handle final_answer - now only need to handle null values, as content has already been streamed
         if "final_answer" in result:
             final_answer_content = result["final_answer"].strip()
 
-            if final_answer_content.lower() == "null":
+            if final_answer_content.lower() in ["null", "none"]:
                 result["final_answer"] = None
             elif final_answer_content == "":
                 # Empty content
