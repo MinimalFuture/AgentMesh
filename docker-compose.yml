@@ -8,3 +8,5 @@ services:
       - ./config.yaml:/app/config.yaml
     stdin_open: true  # Enable interactive input
     tty: true         # Allocate a pseudo-TTY
+    environment:
+      - DOCKER_CONTAINER=true

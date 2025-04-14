@@ -19,3 +19,6 @@ ENV CONFIG_PATH=/app/config.yaml
 
 # Set entrypoint
 CMD ["/app/entrypoint.sh"]
+
+# 添加环境变量标识Docker容器环境
+ENV DOCKER_CONTAINER=true
