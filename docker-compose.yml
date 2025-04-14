@@ -1,9 +1,9 @@
-version: '3'
+version: '2.0'
 
 services:
   agentmesh:
-    build: .
-    image: agentmesh
+    image: minimalfuture/agentmesh
+    container_name: agentmesh
     volumes:
       - ./config.yaml:/config/config.yaml
     stdin_open: true  # Enable interactive input

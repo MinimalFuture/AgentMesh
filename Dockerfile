@@ -5,6 +5,9 @@ WORKDIR /app
 # Copy project files
 COPY . /app/
 
+# Make entrypoint script executable
+RUN chmod +x entrypoint.sh
+
 # Install dependencies
 RUN pip install --no-cache-dir -e .
 
@@ -15,4 +18,4 @@ RUN mkdir -p /config
 ENV CONFIG_PATH=/config/config.yaml
 
 # Set entrypoint
-ENTRYPOINT ["python", "-m", "agentmesh"]
+CMD ["/app/entrypoint.sh"]
