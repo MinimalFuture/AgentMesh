@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -e .
 RUN mkdir -p /config
 
 # Set environment variable pointing to config file
-ENV CONFIG_PATH=/config/config.yaml
+ENV CONFIG_PATH=/app/config.yaml
 
 # Set entrypoint
 CMD ["/app/entrypoint.sh"]
