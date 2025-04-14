@@ -34,7 +34,7 @@ Install core dependencies:
 pip install -r requirements.txt
 ```
 
-For browser tools, install additional dependencies (optional, python3.11+ required):
+For browser tools, install additional dependencies (python3.11+ required):
 
 ```bash
 pip install browser-use

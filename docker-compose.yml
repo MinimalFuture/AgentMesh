@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  agentmesh:
+    build: .
+    image: agentmesh
+    volumes:
+      - ./config.yaml:/config/config.yaml
+    stdin_open: true  # Enable interactive input
+    tty: true         # Allocate a pseudo-TTY
