@@ -39,9 +39,10 @@ COPY requirements.txt requirements-optional.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -r requirements-optional.txt
 
-# Install Playwright
+# Install Playwright with specific browser path
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
 RUN pip install --no-cache-dir playwright && \
-    playwright install --with-deps chromium
+    python -m playwright install --with-deps chromium
 
 # Copy project files
 COPY . /app/
@@ -59,8 +60,6 @@ RUN mkdir -p /config
 # Set environment variables
 ENV CONFIG_PATH=/app/config.yaml
 ENV DOCKER_CONTAINER=true
-# Set Playwright environment variables
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Set entrypoint
 CMD ["/app/entrypoint.sh"]

@@ -4,9 +4,11 @@ services:
   agentmesh:
     image: minimalfuture/agentmesh
     container_name: agentmesh
-    volumes:
-      - ../config.yaml:/app/config.yaml
+    security_opt:
+      - seccomp:unconfined
     stdin_open: true  # Enable interactive input
     tty: true         # Allocate a pseudo-TTY
     environment:
-      - DOCKER_CONTAINER=true
+      DOCKER_CONTAINER: 'True'
+    volumes:
+      - ../config.yaml:/app/config.yaml
