@@ -3,6 +3,7 @@ from typing import Any, Dict
 import json
 import re
 import os
+import platform
 from browser_use import Browser
 from browser_use import BrowserConfig
 from browser_use.browser.context import BrowserContext, BrowserContextConfig
@@ -33,6 +34,12 @@ def _get_action_prompt():
     for action_class in action_classes:
         action_prompt += f"{action_class.code}: {action_class.description}\n"
     return action_prompt.strip()
+
+
+def _header_less() -> bool:
+    if platform.system() == "Linux" and not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+        return True
+    return False
 
 
 class BrowserTool(BaseTool):
@@ -95,8 +102,8 @@ class BrowserTool(BaseTool):
             os.environ['BROWSER_USE_LOGGING_LEVEL'] = 'error'
             print("Initializing browser...")
             # Initialize the browser synchronously
-            BrowserTool.browser = Browser(BrowserConfig(headless=False,
-                                                        disable_security=True))  # Set to non-headless mode to see the browser window
+            BrowserTool.browser = Browser(BrowserConfig(headless=_header_less(),
+                                                        disable_security=True))
             context_config = BrowserContextConfig()
             context_config.highlight_elements = True
             BrowserTool.browser_context = await BrowserTool.browser.new_context(context_config)

@@ -40,14 +40,15 @@ teams:
           - time
           - calculator
 
-  browser_team:
-    model: "gpt-4o"
+  search_team:
+    model: "claude-3-7-sonnet-latest"
     description: "A Search Assistant Team"
     agents:
       - name: "Search Assistant"
         description: "Searching by operating the browser"
-        system_prompt: "You are a browser operation assistant, completing user tasks by operating the browser"
+        system_prompt: "You are a browser operation assistant, completing user tasks by executing search tool and operating the browser"
         tools:
           - time
+          - calculator
           - browser
           - google_search
