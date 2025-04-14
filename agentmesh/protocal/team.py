@@ -12,7 +12,7 @@ from agentmesh.protocal.task import Task, TaskStatus
 
 
 class AgentTeam:
-    def __init__(self, name: str, description: str, rule: str = "", model: LLMModel = None):
+    def __init__(self, name: str, description: str, rule: str = "", model: LLMModel = None, max_steps: int = 20):
         """
         Initialize the AgentTeam with a name, description, rules, and a list of agents.
 
@@ -20,6 +20,7 @@ class AgentTeam:
         :param description: A description of the agent group.
         :param rule: The rules governing the agent group.
         :param model: An instance of LLMModel to be used by the team.
+        :param max_steps: Maximum number of total steps across all agents (default: 20)
         """
         self.name = name
         self.description = description
@@ -27,6 +28,7 @@ class AgentTeam:
         self.agents = []
         self.context = TeamContext(name, description, rule, agents=self.agents)
         self.model: LLMModel = model  # Instance of LLMModel
+        self.max_steps = max_steps  # Maximum total steps across all agents
 
     def add(self, agent: Agent):
         """
@@ -143,6 +145,9 @@ class AgentTeam:
             # Pass output mode to agent
             selected_agent.output_mode = output_mode
 
+            # Track total steps used across all agents
+            total_steps_used = 0
+
             if selected_agent:
                 # Create an AgentExecutionResult to track this agent's execution
                 agent_result = AgentExecutionResult(
@@ -152,7 +157,12 @@ class AgentTeam:
                 )
 
                 # Execute the selected agent's step method
-                final_answer = selected_agent.step()
+                step_result = selected_agent.step()
+                final_answer = step_result.final_answer
+                step_count = step_result.step_count
+
+                # Update total steps used
+                total_steps_used += step_count
 
                 # Collect the execution results of the selected agent
                 agent_result.final_answer = final_answer if final_answer else ""
@@ -171,6 +181,11 @@ class AgentTeam:
                 # Process the agent chain
                 current_agent = selected_agent
                 while True:
+                    # Check if we've exceeded the maximum total steps
+                    if total_steps_used >= self.max_steps:
+                        output(f"\nReached maximum total steps ({self.max_steps}). Stopping execution.")
+                        break
+
                     # Get the next agent ID
                     next_agent_id = current_agent.should_invoke_next_agent()
 
@@ -192,7 +207,12 @@ class AgentTeam:
                     )
 
                     # Execute the next agent
-                    next_final_answer = next_agent.step()
+                    step_result = next_agent.step()
+                    next_final_answer = step_result.final_answer
+                    step_count = step_result.step_count
+
+                    # Update total steps used
+                    total_steps_used += step_count
 
                     # Collect the execution results of the next agent
                     next_agent_result.final_answer = next_final_answer if next_final_answer else ""

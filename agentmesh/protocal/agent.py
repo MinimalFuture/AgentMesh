@@ -7,13 +7,13 @@ from agentmesh.common.utils.log import logger
 from agentmesh.common.utils.xml_util import XmlResParser
 from agentmesh.models import LLMRequest, LLMModel
 from agentmesh.protocal.context import TeamContext, AgentOutput
-from agentmesh.protocal.result import AgentAction, AgentActionType, ToolResult
+from agentmesh.protocal.result import AgentAction, AgentActionType, ToolResult, AgentResult
 from agentmesh.tools.base_tool import BaseTool
 
 
 class Agent:
     def __init__(self, name: str, system_prompt: str, description: str, model: LLMModel = None, team_context=None,
-                 tools=None, output_mode="print"):
+                 tools=None, output_mode="print", max_steps=10):
         """
         Initialize the Agent with a name, system prompt, model, description, and optional group context.
 
@@ -25,6 +25,7 @@ class Agent:
         :param tools: Optional list of tools for the agent to use.
         :param output_mode: Control how execution progress is displayed: 
                            "print" for console output or "logger" for using logger
+        :param max_steps: Maximum number of steps the agent can take (default: 10)
         """
         self.name = name
         self.system_prompt = system_prompt
@@ -33,7 +34,7 @@ class Agent:
         self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
         self.tools: list = []
-        self.max_react_steps = 10  # max ReAct steps
+        self.max_steps = max_steps  # max ReAct steps
         self.conversation_history = []
         self.action_history = []
         self.ext_data = ""
@@ -113,23 +114,25 @@ Your sub task: {self.subtask}"""
     def step(self):
         """
         Execute the agent's task by querying the model and deciding on the next steps.
+
+        :return: A StepResult object containing the final answer and step count
         """
         final_answer = None
         current_step = 0
         raw_response = ""
 
-        # 初始化捕获的动作列表（如果不存在）
+        # Initialize captured actions list (if it doesn't exist)
         if not hasattr(self, 'captured_actions'):
             self.captured_actions = []
 
-        # 初始化最终答案（如果不存在）
+        # Initialize final answer (if it doesn't exist)
         if not hasattr(self, 'final_answer'):
             self.final_answer = ""
 
         # Print agent name and subtask
         self.output(f"🤖 {self.name.strip()}: {self.subtask}")
 
-        while current_step < self.max_react_steps and not final_answer:
+        while current_step < self.max_steps and not final_answer:
             user_prompt = self._build_react_prompt() + "\n\n## Historical steps:\n"
             if self.action_history:
                 user_prompt += f"\n{json.dumps(self.action_history[-5:], ensure_ascii=False, indent=4)}"
@@ -173,7 +176,7 @@ Your sub task: {self.subtask}"""
                         status_code = chunk.get("status_code", 0)
                         # Use logger to record errors, no need to duplicate printing
                         logger.error(f"Error: {error_message} (Status code: {status_code})")
-                        return f"Error: {error_message}"
+                        return AgentResult.error(error_message, current_step)
 
                     if first_token:
                         first_token = False
@@ -206,7 +209,7 @@ Your sub task: {self.subtask}"""
                     error_message = response.get_error_msg()
                     # Use logger to record errors, no need to duplicate printing
                     logger.error(f"Error: {error_message}")
-                    return f"Error: {error_message}"
+                    return AgentResult.error(error_message, current_step)
 
                 raw_response = response.data["choices"][0]["message"]["content"]
 
@@ -275,7 +278,11 @@ Your sub task: {self.subtask}"""
             AgentOutput(agent_name=self.name, output=result)
         )
 
-        return self.final_answer
+        # Return a StepResult object
+        return AgentResult.success(
+            final_answer=self.final_answer,
+            step_count=current_step + 1  # +1 because we count steps starting from 1
+        )
 
     def should_invoke_next_agent(self) -> int:
         """

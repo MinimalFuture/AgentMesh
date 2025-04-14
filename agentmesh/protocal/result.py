@@ -201,3 +201,40 @@ class TeamResult:
             "end_time": self.end_time,
             "status": self.status
         }
+
+
+@dataclass
+class AgentResult:
+    """
+    Represents the result of an agent's step execution.
+
+    Attributes:
+        final_answer: The final answer provided by the agent
+        step_count: Number of steps taken by the agent
+        status: Status of the execution (success/error)
+        error_message: Error message if execution failed
+    """
+    final_answer: str
+    step_count: int
+    status: str = "success"
+    error_message: Optional[str] = None
+
+    @classmethod
+    def success(cls, final_answer: str, step_count: int) -> "AgentResult":
+        """Create a successful step result"""
+        return cls(final_answer=final_answer, step_count=step_count)
+
+    @classmethod
+    def error(cls, error_message: str, step_count: int = 0) -> "AgentResult":
+        """Create an error step result"""
+        return cls(
+            final_answer=f"Error: {error_message}",
+            step_count=step_count,
+            status="error",
+            error_message=error_message
+        )
+
+    @property
+    def is_error(self) -> bool:
+        """Check if the result represents an error"""
+        return self.status == "error"

@@ -9,6 +9,7 @@ models:
   claude:
     api_key: "YOUR_API_KEY"
 
+
 # Tool config
 tools:
   google_search:
@@ -20,6 +21,7 @@ teams:
   software_team:
     model: "gpt-4o"
     description: "A software development team with product manager, architect, and developer"
+    max_steps: 20          # Maximum total steps in this team
     agents:
       - name: "Product Manager"
         description: "Responsible for product requirements and documentation"
@@ -48,3 +50,4 @@ teams:
         tools:
           - time
           - browser
+          - google_search
