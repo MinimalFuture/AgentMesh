@@ -5,9 +5,13 @@ import os
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+# 读取 requirements.txt
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(
     name="agentmesh-sdk",
-    version="0.0.1.dev2",
+    version="0.0.1.dev3",
     author="Minimal Future",
     author_email="zyj@zhayujie.com",
     description="An open-source multi-agent framework for building agent teams with LLMs",
@@ -25,12 +29,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     python_requires=">=3.7",
-    install_requires=[
-        "urllib3",
-        "requests",
-        "pyyaml",
-        "pydantic"
-    ],
+    install_requires=requirements,
     extras_require={
         "full": ["browser-use>=0.1.40"],
     },
