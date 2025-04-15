@@ -1,4 +1,5 @@
 import importlib
+import importlib.util
 from pathlib import Path
 from typing import Dict
 from agentmesh.tools.base_tool import BaseTool
@@ -28,7 +29,7 @@ class ToolManager:
     def load_tools(self, tools_dir: str = "agentmesh/tools"):
         """
         Load tools from both directory and configuration.
-        
+
         :param tools_dir: Directory to scan for tool modules
         """
         # First, load tools from directory (for backward compatibility)
@@ -38,52 +39,49 @@ class ToolManager:
         self._configure_tools_from_config()
 
         print(f"Loaded {len(self.tools)} tools: {', '.join(self.tools.keys())}")
-    
+
     def _load_tools_from_directory(self, tools_dir: str):
-        """Dynamically load tools from directory"""
+        """Dynamically load tools from directory using file loading"""
         tools_path = Path(tools_dir)
-        for py_file in tools_path.rglob("*.py"):  # Use rglob to recursively find .py files
+
+        # Traverse all .py files
+        for py_file in tools_path.rglob("*.py"):
+            # Skip initialization files and base tool files
             if py_file.name in ["__init__.py", "base_tool.py", "tool_manager.py"]:
                 continue
 
-            # Construct the module name based on the relative path
-            plugin_name = py_file.stem
-            module_name = str(py_file.relative_to(Path(tools_dir).parent)).replace("/", ".").replace(".py", "")
-            # print(f"plugin_name: {plugin_name}, module_name: {module_name}")
+            # Get module name
+            module_name = py_file.stem
 
-            # Import using the corrected module name
             try:
-                module = importlib.import_module(f"agentmesh.{module_name}")  # Ensure the correct base package
-            except ModuleNotFoundError as e:
-                # If browser_use dependency is missing, silently ignore
-                if "browser_use" in str(e):
-                    # Optional: Print a more friendly message
-                    # print(f"Skipping optional tool {module_name}: {e}")
-                    continue
-                # Other import errors are printed
-                print(f"Error importing module {module_name}: {e}")
-                continue
+                # Load module directly from file
+                spec = importlib.util.spec_from_file_location(module_name, py_file)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
 
-            for attr_name in dir(module):
-                cls = getattr(module, attr_name)
-                if (
-                        isinstance(cls, type)
-                        and issubclass(cls, BaseTool)
-                        and cls != BaseTool
-                ):
-                    try:
-                        tool_instance = cls()
-                        self.tools[tool_instance.name] = tool_instance
-                    except TypeError as e:
-                        print(f"Error initializing tool {cls.__name__}: {e}")
-                    except ImportError as e:
-                        # Catch tool initialization import errors
-                        if "browser_use" in str(e):
-                            # Optional: Print a more friendly message
-                            # print(f"Skipping optional tool {cls.__name__}: {e}")
-                            pass
-                        else:
-                            print(f"Error initializing tool {cls.__name__}: {e}")
+                    # Find tool classes in the module
+                    for attr_name in dir(module):
+                        cls = getattr(module, attr_name)
+                        if (
+                                isinstance(cls, type)
+                                and issubclass(cls, BaseTool)
+                                and cls != BaseTool
+                        ):
+                            try:
+                                # Instantiate tool and add to tool dictionary
+                                tool_instance = cls()
+                                self.tools[tool_instance.name] = tool_instance
+                            except ImportError as e:
+                                # Ignore browser_use dependency missing errors
+                                if "browser_use" in str(e):
+                                    pass
+                                else:
+                                    print(f"Error initializing tool {cls.__name__}: {e}")
+                            except Exception as e:
+                                print(f"Error initializing tool {cls.__name__}: {e}")
+            except Exception as e:
+                print(f"Error importing module {py_file}: {e}")
 
     def _configure_tools_from_config(self):
         """Configure tools based on configuration file"""
@@ -120,7 +118,7 @@ class ToolManager:
     def get_tool(self, name: str) -> BaseTool:
         """
         Get a tool by name.
-        
+
         :param name: The name of the tool to get.
         :return: The tool instance or None if not found.
         """
@@ -129,7 +127,7 @@ class ToolManager:
     def list_tools(self) -> dict:
         """
         Get information about all loaded tools.
-        
+
         :return: A dictionary with tool information.
         """
         return {
