@@ -110,7 +110,7 @@ result = team.run(task="Write a Snake client game")
 
 Coming soon
 
-## Details
+## Components
 
 ### Core Concepts
 
@@ -135,7 +135,7 @@ Coming soon
 - **current_time**: Current time retrieval tool solving model time awareness issues
 - **browser**: Web browsing tool based on browser-use, supporting web access, content extraction, and interaction
 - **google_search**: Search engine tool for retrieving up-to-date information
-- **MCP**: Multi-modal content processing tool supporting image recognition and generation (coming soon)
+- **MCP**: Extended tool capabilities through MCP protocol support (coming soon)
 
 ## Contribution
 
