@@ -15,8 +15,8 @@ models:
 # Tool config
 tools:
   google_search:
+    # get your apikey from https://serper.dev/
     api_key: "YOUR_SERPER_API_KEY"
-
 
 # Team config
 teams:

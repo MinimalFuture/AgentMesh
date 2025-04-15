@@ -6,6 +6,18 @@ AgentMesh is a **Multi-Agent platform** for AI agents building, providing a fram
 task planning, and autonomous decision-making. Build your agent team quickly and solve complex tasks through agent
 collaboration.
 
+# Overview
+
+AgentMesh uses a modular layered design for flexible and extensible multi-agent systems:
+
+- **Agent Collaboration**: Support for role definition, task allocation, and multi-turn autonomous decision-making.
+  Communication protocol for remote heterogeneous agents coming soon.
+- **Multi-Modal Models**: Seamless integration with OpenAI, Claude, DeepSeek, and other leading LLMs through a unified
+  API.
+- **Extensible Tools**: Built-in search engines, browser automation, file system access, and terminal tools. MCP
+  protocol support coming soon for even more tool extensions.
+- **Multi-Platform**: Run via CLI, Docker, or SDK. WebUI and integration with common software coming soon.
+
 # Quick Start
 
 Choose one of these three ways to build and run your agent team:
@@ -78,7 +90,7 @@ from agentmesh import AgentTeam, Agent, LLMModel
 from agentmesh.tools import *
 
 # Initialize model
-model = LLMModel(model="gpt-4o", api_key="YOUR_API_KEY")  # Replace with your actual API key
+model = LLMModel(model="gpt-4o", api_key="YOUR_API_KEY")
 
 # Create team and add agents
 team = AgentTeam(name="software_team", description="A software development team", model=model)
@@ -97,3 +109,37 @@ result = team.run(task="Write a Snake client game")
 ## 3. Web Service
 
 Coming soon
+
+# Details
+
+## Core Concepts
+
+- **Agent**: Autonomous decision-making unit with specific roles and capabilities, configurable with models, system
+  prompts, tools, and decision logic.
+- **AgentTeam**: Team of agents responsible for task allocation, context management, and collaboration workflow.
+- **Tool**: Functional modules that extend agent capabilities, such as calculators, search engines, and browsers.
+- **Task**: User input problems or requirements, which can include text, images, and other multi-modal content.
+- **Context**: Shared information including team details, task content, and execution history.
+- **LLMModel**: Large language model interface supporting various mainstream LLMs through a unified API.
+
+## Supported Models
+
+- **OpenAI**: GPT series models, recommended: `gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`
+- **Claude**: Claude series models, recommended: `claude-3-7-sonnet-latest`
+- **DeepSeek**: DeepSeek series models, recommended: `deepseek-chat`
+- **Ollama**: Local open-source models (coming soon)
+
+## Built-in Tools
+
+- **calculator**: Mathematical calculation tool supporting complex expression evaluation
+- **current_time**: Current time retrieval tool solving model time awareness issues
+- **browser**: Web browsing tool based on browser-use, supporting web access, content extraction, and interaction
+- **google_search**: Search engine tool for retrieving up-to-date information
+- **MCP**: Multi-modal content processing tool supporting image recognition and generation (coming soon)
+
+# Contribution
+
+Star this project to receive notifications about updates.
+
+Feel free to [submit PRs](https://github.com/MinimalFuture/AgentMesh/pulls) to contribute to this project.
+For issues or ideas, please [open an issue](https://github.com/MinimalFuture/AgentMesh/issues).

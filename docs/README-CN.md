@@ -3,8 +3,17 @@
 
 <a href="/README.md">English</a> | 中文
 
-AgentMesh是一个 **多智能体 (Multi-agent) 平台** ，提供AI Agent开发框架、多Agent间的通信协议、复杂任务规划和自主决策。
-基于该平台可以快速构建你的Agent Team，通过Agents之间的协作完成任务。
+AgentMesh是一个开源的 **多智能体 (Multi-agent) 平台** ，提供开箱即用的Agent开发框架、多Agent间的协同策略、任务规划和自主决策能力。
+在该平台上可以快速构建你的Agent团队，通过多Agent之间的协同完成任务。
+
+# 概述
+
+AgentMesh 采用模块化分层设计，提供灵活且可扩展的多智能体系统构建能力：
+
+- 多Agent协同：支持多Agent角色定义、任务分配、多轮自主决策，即将支持与远程异构Agent的通信协议
+- 多模态模型：支持 OpenAI、Claude、DeepSeek 等主流大语言模型，统一接口设计支持无缝切换
+- 可扩展工具：内置搜索引擎、浏览器、文件系统、终端等工具，并将通过支持 MCP 协议获得更多工具扩展
+- 多端运行：支持命令行、Docker、SDK 等多种运行方式，即将支持 WebUI 及多种常用软件的集成
 
 # 快速开始
 
@@ -98,3 +107,36 @@ team.run(task="Write a Snake client game")
 ## 三、Web服务运行
 
 即将支持
+
+# 详细介绍
+
+## 概念
+
+- Agent: 智能体，具有特定角色和能力的自主决策单元，可配置模型、系统提示词、工具集和决策逻辑
+- AgentTeam: 智能体团队，由多个Agent组成，负责任务分配、上下文管理和协作流程控制
+- Tool: 工具，扩展Agent能力的功能模块，如计算器、搜索引擎、浏览器等
+- Task: 任务，用户输入的问题或需求，可包含文本、图像等多模态内容
+- Context: 上下文，包含团队信息、任务内容和Agent间共享的执行历史
+- LLMModel: 大语言模型，支持多种主流大语言模型，统一接口设计
+
+## 模型
+
+- OpenAI: 支持 GPT 系列模型，推荐使用 `gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`
+- Claude: 支持 Claude系列模型，推荐使用 `claude-3-7-sonnect-latest`
+- DeepSeek: 支持 DeepSeek 系列模型，推荐使用 `deepseek-chat`
+- Ollama: 支持本地部署的开源模型 (即将支持)
+
+## 工具
+
+- calculator: 数学计算工具，支持复杂表达式求值
+- current_time: 获取当前时间工具，解决模型时间感知问题
+- browser: 浏览器操作工具，基于browser-use实现，支持网页访问、内容提取和交互操作
+- google_search: 搜索引擎工具，获取最新信息和知识
+- MCP: 多模态内容处理工具，支持图像识别和生成（即将支持）
+
+# 贡献
+
+Star支持和关注本项目，可以接受最新的项目更新通知。
+
+欢迎 [提交PR](https://github.com/MinimalFuture/AgentMesh/pulls)
+来共同参与这个项目，遇到问题或有任何想法可 [提交Issues](https://github.com/MinimalFuture/AgentMesh/issues) 进行反馈。
