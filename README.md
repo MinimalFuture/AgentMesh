@@ -6,7 +6,7 @@ AgentMesh is a **Multi-Agent platform** for AI agents building, providing a fram
 task planning, and autonomous decision-making. Build your agent team quickly and solve complex tasks through agent
 collaboration.
 
-# Overview
+## Overview
 
 AgentMesh uses a modular layered design for flexible and extensible multi-agent systems:
 
@@ -18,15 +18,15 @@ AgentMesh uses a modular layered design for flexible and extensible multi-agent 
   protocol support coming soon for even more tool extensions.
 - **Multi-Platform**: Run via CLI, Docker, or SDK. WebUI and integration with common software coming soon.
 
-# Quick Start
+## Quick Start
 
 Choose one of these three ways to build and run your agent team:
 
-## 1. Terminal
+### 1. Terminal
 
 Run a multi-agent team from your command line:
 
-### 1.1 Installation
+#### 1.1 Installation
 
 **Requirements:** Linux, MacOS, or Windows with Python installed.
 
@@ -53,7 +53,7 @@ pip install browser-use
 playwright install
 ```
 
-### 1.2 Configuration
+#### 1.2 Configuration
 
 Edit the `config.yaml` file with your model settings and agent configurations:
 
@@ -66,7 +66,7 @@ Add your model `api_key` - AgentMesh supports `openai`, `claude`, `deepseek`, `q
 > The template includes a pre-configured `software_team` with three roles (PM, architect, engineer) that collaborate on
 > software development tasks.
 
-### 1.3 Execution
+#### 1.3 Execution
 
 ```bash
 python main.py -l                   # List available agent teams
@@ -75,7 +75,7 @@ python main.py -t software_team     # Run the 'software_team'
 
 Enter your requirements in the interactive prompt to begin.
 
-## 2. SDK
+### 2. SDK
 
 Use the AgentMesh SDK to build custom agent teams programmatically:
 
@@ -106,13 +106,13 @@ team.add(Agent(name="Developer", description="Implements code based on requireme
 result = team.run(task="Write a Snake client game")
 ```
 
-## 3. Web Service
+### 3. Web Service
 
 Coming soon
 
-# Details
+## Details
 
-## Core Concepts
+### Core Concepts
 
 - **Agent**: Autonomous decision-making unit with specific roles and capabilities, configurable with models, system
   prompts, tools, and decision logic.
@@ -122,14 +122,14 @@ Coming soon
 - **Context**: Shared information including team details, task content, and execution history.
 - **LLMModel**: Large language model interface supporting various mainstream LLMs through a unified API.
 
-## Supported Models
+### Supported Models
 
 - **OpenAI**: GPT series models, recommended: `gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`
 - **Claude**: Claude series models, recommended: `claude-3-7-sonnet-latest`
 - **DeepSeek**: DeepSeek series models, recommended: `deepseek-chat`
 - **Ollama**: Local open-source models (coming soon)
 
-## Built-in Tools
+### Built-in Tools
 
 - **calculator**: Mathematical calculation tool supporting complex expression evaluation
 - **current_time**: Current time retrieval tool solving model time awareness issues
@@ -137,7 +137,7 @@ Coming soon
 - **google_search**: Search engine tool for retrieving up-to-date information
 - **MCP**: Multi-modal content processing tool supporting image recognition and generation (coming soon)
 
-# Contribution
+## Contribution
 
 Star this project to receive notifications about updates.
 

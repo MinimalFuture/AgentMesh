@@ -6,7 +6,7 @@
 AgentMesh是一个开源的 **多智能体 (Multi-agent) 平台** ，提供开箱即用的Agent开发框架、多Agent间的协同策略、任务规划和自主决策能力。
 在该平台上可以快速构建你的Agent团队，通过多Agent之间的协同完成任务。
 
-# 概述
+## 概述
 
 AgentMesh 采用模块化分层设计，提供灵活且可扩展的多智能体系统构建能力：
 
@@ -15,15 +15,15 @@ AgentMesh 采用模块化分层设计，提供灵活且可扩展的多智能体�
 - 可扩展工具：内置搜索引擎、浏览器、文件系统、终端等工具，并将通过支持 MCP 协议获得更多工具扩展
 - 多端运行：支持命令行、Docker、SDK 等多种运行方式，即将支持 WebUI 及多种常用软件的集成
 
-# 快速开始
+## 快速开始
 
 提供三种使用方式快速构建并运行你的 Agent Team：
 
-## 一、终端运行
+### 1.终端运行
 
 在终端中命令行中快速运行多智能体团队:
 
-### 1.安装
+#### 1.1 安装
 
 **环境准备：** 支持 Linux、MacOS、Windows 系统，需要安装 python。
 
@@ -50,7 +50,7 @@ pip install browser-use
 playwright install
 ```
 
-### 2.配置
+#### 1.2 配置
 
 配置文件为根目录下的 `config.yaml`，包含模型配置和Agent配置，可以从模板文件复制后修改：
 
@@ -62,7 +62,7 @@ cp config-template.yaml config.yaml
 
 配置模板中预置了一个名为 `software_team` 的Agent开发团队，包含产品经理、架构师、工程师三种角色，可以协作完成软件开发任务。
 
-### 3.运行
+#### 1.3 运行
 
 ```bash
 python main.py -l                   # 查看可用agent team                 
@@ -71,7 +71,7 @@ python main.py -t software_team     # 运行名为 'software_team' 的team
 
 进入交互模式后输入需求内容即可开始运行。
 
-## 二、 SDK开发
+### 二、 SDK开发
 
 `Agentmesh`的核心模块通过SDK对外提供，开发者可基于该SDK快速构建智能体及多智能体团队。
 
@@ -104,13 +104,13 @@ team.add(Agent(name="Developer", description="Implements code based on PRD and a
 team.run(task="Write a Snake client game")
 ```
 
-## 三、Web服务运行
+### 三、Web服务运行
 
 即将支持
 
-# 详细介绍
+## 详细介绍
 
-## 概念
+### 概念
 
 - Agent: 智能体，具有特定角色和能力的自主决策单元，可配置模型、系统提示词、工具集和决策逻辑
 - AgentTeam: 智能体团队，由多个Agent组成，负责任务分配、上下文管理和协作流程控制
@@ -119,14 +119,14 @@ team.run(task="Write a Snake client game")
 - Context: 上下文，包含团队信息、任务内容和Agent间共享的执行历史
 - LLMModel: 大语言模型，支持多种主流大语言模型，统一接口设计
 
-## 模型
+### 模型
 
 - OpenAI: 支持 GPT 系列模型，推荐使用 `gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`
 - Claude: 支持 Claude系列模型，推荐使用 `claude-3-7-sonnect-latest`
 - DeepSeek: 支持 DeepSeek 系列模型，推荐使用 `deepseek-chat`
 - Ollama: 支持本地部署的开源模型 (即将支持)
 
-## 工具
+### 工具
 
 - calculator: 数学计算工具，支持复杂表达式求值
 - current_time: 获取当前时间工具，解决模型时间感知问题
@@ -134,7 +134,7 @@ team.run(task="Write a Snake client game")
 - google_search: 搜索引擎工具，获取最新信息和知识
 - MCP: 多模态内容处理工具，支持图像识别和生成（即将支持）
 
-# 贡献
+## 贡献
 
 Star支持和关注本项目，可以接受最新的项目更新通知。
 
