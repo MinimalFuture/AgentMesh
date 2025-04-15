@@ -13,7 +13,7 @@ from agentmesh.tools.base_tool import BaseTool
 
 class Agent:
     def __init__(self, name: str, system_prompt: str, description: str, model: LLMModel = None, team_context=None,
-                 tools=None, output_mode="print", max_steps=10):
+                 tools=None, output_mode="print", max_steps=None):
         """
         Initialize the Agent with a name, system prompt, model, description, and optional group context.
 
@@ -25,7 +25,7 @@ class Agent:
         :param tools: Optional list of tools for the agent to use.
         :param output_mode: Control how execution progress is displayed: 
                            "print" for console output or "logger" for using logger
-        :param max_steps: Maximum number of steps the agent can take (default: 10)
+        :param max_steps: Maximum number of steps the agent can take (default: None, meaning no limit)
         """
         self.name = name
         self.system_prompt = system_prompt
@@ -34,7 +34,7 @@ class Agent:
         self.team_context: TeamContext = team_context  # Store reference to group context if provided
         self.subtask: str = ""
         self.tools: list = []
-        self.max_steps = max_steps  # max ReAct steps
+        self.max_steps = max_steps  # max ReAct steps, None means no limit
         self.conversation_history = []
         self.action_history = []
         self.ext_data = ""
@@ -93,7 +93,6 @@ Current time: {formatted_time}
 Team description: {self.team_context.description}
 Other agents output: {self._fetch_agents_outputs()}
 
-User origin task: {self.team_context.user_task}
 Your sub task: {self.subtask}"""
 
         return tools_prompt + ext_data_prompt + current_task_prompt
@@ -132,7 +131,8 @@ Your sub task: {self.subtask}"""
         # Print agent name and subtask
         self.output(f"🤖 {self.name.strip()}: {self.subtask}")
 
-        while current_step < self.max_steps and not final_answer:
+        # Use max_steps if set, otherwise continue until final answer is found
+        while (self.max_steps is None or current_step < self.max_steps) and not final_answer:
             user_prompt = self._build_react_prompt() + "\n\n## Historical steps:\n"
             if self.action_history:
                 user_prompt += f"\n{json.dumps(self.action_history[-5:], ensure_ascii=False, indent=4)}"
@@ -225,11 +225,13 @@ Your sub task: {self.subtask}"""
                     action_input = parsed.get("action_input", {})
                     action_input_str = json.dumps(action_input, ensure_ascii=False) if action_input else ""
                     logger.info(f"🛠️ {parsed['action']}: {action_input_str}")
-                if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in ["null", "none"]:
+                if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in [
+                    "null", "none"]:
                     logger.info(f"💬 {parsed['final_answer']}")
 
             # Handle final answer
-            if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in ["null", "none"]:
+            if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in ["null",
+                                                                                                              "none"]:
                 final_answer = parsed["final_answer"]
                 break
 
@@ -471,7 +473,7 @@ Team Name: {group_name}
 Team Description: {group_description}
 Team Rules: {group_rules}
 
-## List of all members:
+## List of available members:
 {agents_str}
 
 ## Members have replied

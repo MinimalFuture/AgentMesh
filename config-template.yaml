@@ -5,9 +5,11 @@ models:
   openai:
     api_base: "https://api.openai.com/v1"
     api_key: "YOUR_API_KEY"
+    models: [ "gpt-4.1", "gpt-4o", "gpt-4.1-mini" ]
 
   claude:
     api_key: "YOUR_API_KEY"
+    models: [ "claude-3-7-sonnet-latest" ]
 
 
 # Tool config
@@ -19,7 +21,7 @@ tools:
 # Team config
 teams:
   software_team:
-    model: "gpt-4o"
+    model: "gpt-4.1-mini"
     description: "A software development team with product manager, architect, and developer"
     max_steps: 20          # Maximum total steps in this team
     agents:
@@ -41,7 +43,7 @@ teams:
           - calculator
 
   search_team:
-    model: "claude-3-7-sonnet-latest"
+    model: "gpt-4.1-mini"
     description: "A Search Assistant Team"
     agents:
       - name: "Search Assistant"
@@ -51,4 +53,3 @@ teams:
           - time
           - calculator
           - browser
-          - google_search

@@ -219,6 +219,25 @@ class XmlResParser:
         """Get parsing results."""
         result = self.parsed_data.copy()
 
+        # Handle incomplete action_input if present
+        if "action" in result and not self.is_null_content["action"] and "action_input" not in result:
+            # Check if we have partial action_input in the raw response
+            action_input_start = self.raw_response.find("<action_input>")
+            if action_input_start != -1:
+                action_input_start += len("<action_input>")
+                action_input_content = self.raw_response[action_input_start:].strip()
+
+                # Store the extracted action_input
+                result["action_input"] = action_input_content
+                self.tag_contents["action_input"] = action_input_content
+
+                # Update null content flag
+                self.is_null_content["action_input"] = (
+                        action_input_content.lower() == "null" or
+                        action_input_content == "" or
+                        action_input_content.isspace()
+                )
+
         # Handle action and action_input
         if "action" in result and not self.is_null_content["action"]:
             action_content = result["action"].strip()
@@ -232,11 +251,26 @@ class XmlResParser:
                     try:
                         # Attempt to parse JSON
                         if action_input_content.startswith("{"):
-                            action_input_json = json.loads(action_input_content)
-                            result["action_input"] = action_input_json
-                            # Print action and action_input
-                            print(
-                                f"\n{self.emoji_map['action']} {action_content}: {json.dumps(action_input_json, ensure_ascii=False)}")
+                            # Try to find a complete JSON object even if the closing tag is missing
+                            try:
+                                # Find the last valid JSON object
+                                last_brace_index = action_input_content.rfind("}")
+                                if last_brace_index != -1:
+                                    valid_json_str = action_input_content[:last_brace_index + 1]
+                                    action_input_json = json.loads(valid_json_str)
+                                    result["action_input"] = action_input_json
+                                    # Print action and action_input
+                                    print(
+                                        f"\n{self.emoji_map['action']} {action_content}: {json.dumps(action_input_json, ensure_ascii=False)}")
+                                else:
+                                    # No closing brace found, use as is
+                                    print(f"\n{self.emoji_map['action']} {action_content}: {action_input_content}")
+                            except json.JSONDecodeError:
+                                # If parsing fails, try with the original string
+                                action_input_json = json.loads(action_input_content)
+                                result["action_input"] = action_input_json
+                                print(
+                                    f"\n{self.emoji_map['action']} {action_content}: {json.dumps(action_input_json, ensure_ascii=False)}")
                         # If it is "null", "none" or empty, set to empty dictionary
                         elif action_input_content.lower() in ["null", "none", ""]:
                             result["action_input"] = {}

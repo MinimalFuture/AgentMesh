@@ -78,7 +78,7 @@ class BrowserTool(BaseTool):
                 "description": f"The number of pixels to scroll (required for '{ScrollDown.code}', '{ScrollUp.code}' action)."
             }
         },
-        "required": ["action"]
+        "required": ["operation"]
     }
 
     # Class variable to ensure only one browser instance is created
