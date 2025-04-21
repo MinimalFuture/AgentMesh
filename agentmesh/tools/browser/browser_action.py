@@ -50,3 +50,10 @@ class SwitchTab(BrowserAction):
     """Switch to a tab"""
     code = "switch_tab"
     description = "Switched to tab"
+
+
+class SendKeys(BrowserAction):
+    """Switch to a tab"""
+    code = "send_keys"
+    description = "Send strings of special keyboard keys like Escape, Backspace, Insert, PageDown, Delete, Enter, " \
+                  "ArrowRight, ArrowUp, etc"

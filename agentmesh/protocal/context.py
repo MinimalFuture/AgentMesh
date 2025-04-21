@@ -1,7 +1,7 @@
 class TeamContext:
     def __init__(self, name: str, description: str, rule: str, agents: list):
         """
-        Initialize the GroupContext with a name, description, rules, a list of agents, and a user question.
+        Initialize the TeamContext with a name, description, rules, a list of agents, and a user question.
         :param name: The name of the group context.
         :param description: A description of the group context.
         :param rule: The rules governing the group context.
@@ -14,6 +14,7 @@ class TeamContext:
         self.user_task = ""  # For backward compatibility
         self.task = None  # Will be a Task instance
         self.model = None  # Will be an instance of LLMModel
+        self.task_short_name = None  # Store the task directory name
         # List of agents that have been executed
         self.agent_outputs: list = []
 

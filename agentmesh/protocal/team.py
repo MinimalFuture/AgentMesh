@@ -1,5 +1,6 @@
 from typing import Union, Literal
 import json
+import re
 
 from agentmesh.common import LoadingIndicator
 from agentmesh.common.utils import string_util
@@ -29,6 +30,7 @@ class AgentTeam:
         self.context = TeamContext(name, description, rule, agents=self.agents)
         self.model: LLMModel = model  # Instance of LLMModel
         self.max_steps = max_steps  # Maximum total steps across all agents
+        self.task_short_name = ""
 
     def add(self, agent: Agent):
         """
@@ -92,7 +94,7 @@ class AgentTeam:
 
             prompt = GROUP_DECISION_PROMPT.format(group_name=self.name, group_description=self.description,
                                                   group_rules=self.rule, agents_str=agents_str,
-                                                  user_question=task.get_text())
+                                                  user_task=task.get_text())
 
             # Start loading animation (only in print mode)
             loading = None
@@ -132,6 +134,8 @@ class AgentTeam:
                 decision_res = string_util.json_loads(reply_text)
                 selected_agent_id = decision_res.get("id")  # Extract the id from the response
                 subtask = decision_res.get("subtask")
+                task_short_name = decision_res.get("task_short_name")
+                self.context.task_short_name = task_short_name
 
                 # Find the selected agent based on the id
                 selected_agent: Agent = self.agents[selected_agent_id]
@@ -263,19 +267,24 @@ class AgentTeam:
 
 
 GROUP_DECISION_PROMPT = """## Role
-As an expert in team task allocation, your role is to select the most suitable team member to initially address the task at hand, and give the subtask that need to be answered by this member. 
-After the task is completed, the results will pass to next member.
+You are the coordinator for a team of AI agents. Your job is to analyze the user's task and decide which agent in the team should handle it first, and give the subtask that need to be answered by this member.
 
-## Team
-Team Name: {group_name}
-Team Description: {group_description}
-Team Rules: {group_rules}
+## Team Information
+Team name: {group_name}
+Team description: {group_description}
+Team rules: {group_rules}
 
-## List of team members:
+## Available Agents
 {agents_str}
 
-## User Question:
-{user_question}
+## User Task
+{user_task}
+
+## Output Format
+Return your response in JSON format with the following fields:
+- id: The ID of the selected agent
+- subtask: the subtask that need to be answered by this member (use the same language as the user's task and preserve all key information from the original task)
+- task_short_name: A descriptive name for the user's original task (lowercase with underscores, max 5 English words)
 
 Please return the result in the following JSON structure which can be parsed directly by json.loads(), no extra content:
-{{"id": <member_id>, "subtask": ""}}"""
+{{"id": <member_id>, "subtask": "", "task_short_name": ""}}"""

@@ -9,6 +9,7 @@ from agentmesh.models import LLMRequest, LLMModel
 from agentmesh.protocal.context import TeamContext, AgentOutput
 from agentmesh.protocal.result import AgentAction, AgentActionType, ToolResult, AgentResult
 from agentmesh.tools.base_tool import BaseTool
+from agentmesh.tools.base_tool import ToolStage
 
 
 class Agent:
@@ -48,10 +49,11 @@ class Agent:
         self.tools.append(tool)
 
     def _build_tools_prompt(self) -> str:
-        """Build the tool list description"""
+        """Build the tool list description, only including pre-process tools"""
         return "\n".join([
             f"{tool.name}: {tool.description} (parameters: {tool.params})"
             for tool in self.tools
+            if tool.stage == ToolStage.PRE_PROCESS  # Only include pre-process tools
         ])
 
     def _build_react_prompt(self) -> str:
@@ -98,10 +100,19 @@ Your sub task: {self.subtask}"""
         return tools_prompt + ext_data_prompt + current_task_prompt
 
     def _find_tool(self, tool_name: str):
+        """Find and return a tool with the specified name"""
         for tool in self.tools:
             if tool.name == tool_name:
-                tool.model = self.model
-                return tool
+                # Only pre-process stage tools can be actively called
+                if tool.stage == ToolStage.PRE_PROCESS:
+                    tool.model = self.model
+                    tool.context = self  # Set tool context
+                    return tool
+                else:
+                    # If it's a post-process tool, return None to prevent direct calling
+                    logger.warning(f"Tool {tool_name} is a post-process tool and cannot be called directly.")
+                    return None
+        return None
 
     # output function based on mode
     def output(self, message="", end="\n"):
@@ -233,6 +244,16 @@ Your sub task: {self.subtask}"""
             if "final_answer" in parsed and parsed["final_answer"] and parsed["final_answer"].lower() not in ["null",
                                                                                                               "none"]:
                 final_answer = parsed["final_answer"]
+                self.final_answer = final_answer
+
+                # Store the final answer in team context
+                self.team_context.agent_outputs.append(
+                    AgentOutput(agent_name=self.name, output=final_answer)
+                )
+
+                # Execute all post-process tools
+                self._execute_post_process_tools()
+
                 break
 
             # Handle tool invocation
@@ -273,18 +294,30 @@ Your sub task: {self.subtask}"""
 
             current_step += 1
 
-        # Save final result
-        result = final_answer if final_answer else raw_response
-        self.final_answer = result
-        self.team_context.agent_outputs.append(
-            AgentOutput(agent_name=self.name, output=result)
-        )
-
         # Return a StepResult object
         return AgentResult.success(
             final_answer=self.final_answer,
             step_count=current_step + 1  # +1 because we count steps starting from 1
         )
+
+    def _execute_post_process_tools(self):
+        """Execute all post-process stage tools"""
+        # Get all post-process stage tools
+        post_process_tools = [tool for tool in self.tools if tool.stage == ToolStage.POST_PROCESS]
+
+        # Execute each tool
+        for tool in post_process_tools:
+            # Set tool context
+            tool.context = self
+
+            # Execute tool (with empty parameters, tool will extract needed info from context)
+            result = tool.execute({})
+
+            # Log result
+            if result.status == "success":
+                logger.info(f"Post-process tool {tool.name} executed successfully: {result.result.get('message', '')}")
+            else:
+                logger.warning(f"Post-process tool {tool.name} failed: {result.result}")
 
     def should_invoke_next_agent(self) -> int:
         """

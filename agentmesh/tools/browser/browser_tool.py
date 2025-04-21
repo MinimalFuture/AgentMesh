@@ -29,7 +29,8 @@ def _import_browser_use():
 
 
 def _get_action_prompt():
-    action_classes = [Navigate, ClickElement, ExtractContent, InputText, OpenTab, SwitchTab, ScrollDown, ScrollUp]
+    action_classes = [Navigate, ClickElement, ExtractContent, InputText, OpenTab, SwitchTab, ScrollDown, ScrollUp,
+                      SendKeys]
     action_prompt = ""
     for action_class in action_classes:
         action_prompt += f"{action_class.code}: {action_class.description}\n"
@@ -76,6 +77,10 @@ class BrowserTool(BaseTool):
             "scroll_amount": {
                 "type": "integer",
                 "description": f"The number of pixels to scroll (required for '{ScrollDown.code}', '{ScrollUp.code}' action)."
+            },
+            "keys": {
+                "type": "string",
+                "description": f"Keys to send (required for '{SendKeys.code}' action)"
             }
         },
         "required": ["operation"]
@@ -245,6 +250,14 @@ The following is the information of the current browser page. Each serial number
             await context.execute_javascript(f"window.scrollBy(0, {scroll_amount});")
             msg = f"{action} by {scroll_amount} pixels"
             return ToolResult.success(result=msg, ext_data=await self._get_page_info(context))
+
+        elif action == SendKeys.code:
+            keys = params.get("keys")
+            page = await context.get_current_page()
+            await page.keyboard.press(keys)
+            msg = f"Sent keys: {keys}"
+            print(msg)
+            return ToolResult(output=f"Sent keys: {keys}")
 
         else:
             msg = "Failed to operate the browser"

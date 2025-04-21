@@ -1,7 +1,14 @@
+from enum import Enum
 from typing import Any
 from pydantic import BaseModel, Field
 from agentmesh.models.llm.base_model import LLMModel
 from agentmesh.common import logger
+
+
+class ToolStage(Enum):
+    """Enum representing tool decision stages"""
+    PRE_PROCESS = "pre_process"  # Tools that need to be actively selected by the agent
+    POST_PROCESS = "post_process"  # Tools that automatically execute after final_answer
 
 
 class ToolResult(BaseModel):
@@ -19,6 +26,11 @@ class ToolResult(BaseModel):
 
 
 class BaseTool:
+    """Base class for all tools."""
+
+    # Default decision stage is pre-process
+    stage = ToolStage.PRE_PROCESS
+
     # Class attributes must be inherited
     name: str = "base_tool"
     description: str = "Base tool"
@@ -63,3 +75,13 @@ class BaseTool:
                 prop.get("default", ...)
             )
         return fields
+
+    def should_auto_execute(self, context) -> bool:
+        """
+        Determine if this tool should be automatically executed based on context.
+
+        :param context: The agent context
+        :return: True if the tool should be executed, False otherwise
+        """
+        # Only tools in post-process stage will be automatically executed
+        return self.stage == ToolStage.POST_PROCESS
