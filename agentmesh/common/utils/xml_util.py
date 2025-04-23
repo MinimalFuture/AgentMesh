@@ -69,6 +69,10 @@ class XmlResParser:
         self.in_final_answer = False
         self.final_answer_started = False
 
+        # Flag to track if we've seen a final_answer start tag
+        self.has_final_answer_start = False
+        self.final_answer_start_pos = -1
+
     def process_chunk(self, chunk):
         """Process a chunk of streaming content."""
         self.raw_response += chunk
@@ -76,6 +80,11 @@ class XmlResParser:
         # Process character by character
         for char in chunk:
             self._process_char(char)
+
+        # Check for unclosed final_answer tag at the end of processing
+        if self.current_tag == "final_answer" and self.in_final_answer:
+            # Add current content to parsed data
+            self.parsed_data[self.current_tag] = self.current_content
 
     def _process_char(self, char):
         """Process a single character."""
@@ -163,6 +172,7 @@ class XmlResParser:
                     if self.current_tag == "final_answer":
                         self.in_final_answer = False
                         self.final_answer_started = False
+                        self.has_final_answer_start = False
 
                     self.current_tag = None
                     self.current_content = ""
@@ -171,6 +181,11 @@ class XmlResParser:
                     self._handle_invalid_tag('</' + self.tag_buffer + '>')
             else:
                 # Start tag
+                # If we're already in a final_answer tag and see another tag, treat it as content
+                if self.in_final_answer and self.current_tag == "final_answer":
+                    self._handle_invalid_tag('<' + self.tag_buffer + '>')
+                    return
+
                 self.current_tag = self.tag_buffer
                 self.current_content = ""
 
@@ -178,6 +193,8 @@ class XmlResParser:
                 if self.current_tag == "final_answer":
                     self.in_final_answer = True
                     self.final_answer_started = False
+                    self.has_final_answer_start = True
+                    self.final_answer_start_pos = len(self.raw_response) - len("<final_answer>")
 
                 # Print tag name
                 if not self.printed_tags[self.tag_buffer]:
@@ -219,13 +236,38 @@ class XmlResParser:
         """Get parsing results."""
         result = self.parsed_data.copy()
 
+        # Handle incomplete final_answer tag
+        if self.has_final_answer_start and "final_answer" not in result:
+            # Extract everything after the final_answer start tag
+            if self.final_answer_start_pos >= 0:
+                final_answer_content = self.raw_response[self.final_answer_start_pos + len("<final_answer>"):].strip()
+                result["final_answer"] = final_answer_content
+                self.tag_contents["final_answer"] = final_answer_content
+
+                # Update null content flag
+                self.is_null_content["final_answer"] = (
+                        final_answer_content.lower() == "null" or
+                        final_answer_content == "" or
+                        final_answer_content.isspace()
+                )
+
         # Handle incomplete action_input if present
         if "action" in result and not self.is_null_content["action"] and "action_input" not in result:
             # Check if we have partial action_input in the raw response
             action_input_start = self.raw_response.find("<action_input>")
             if action_input_start != -1:
                 action_input_start += len("<action_input>")
-                action_input_content = self.raw_response[action_input_start:].strip()
+                action_input_end = self.raw_response.find("</action_input>", action_input_start)
+
+                if action_input_end != -1:
+                    action_input_content = self.raw_response[action_input_start:action_input_end].strip()
+                else:
+                    # If no end tag, take everything until the next start tag or end of string
+                    next_tag_start = self.raw_response.find("<", action_input_start)
+                    if next_tag_start != -1:
+                        action_input_content = self.raw_response[action_input_start:next_tag_start].strip()
+                    else:
+                        action_input_content = self.raw_response[action_input_start:].strip()
 
                 # Store the extracted action_input
                 result["action_input"] = action_input_content

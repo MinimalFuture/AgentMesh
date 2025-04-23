@@ -33,10 +33,6 @@ class FileSave(BaseTool):
             "extract_code": {
                 "type": "boolean",
                 "description": "Optional. If true, will attempt to extract code blocks from the content. Default is false."
-            },
-            "task_dir": {
-                "type": "string",
-                "description": "Optional. The name of the task directory. If not provided, it will be generated based on the content."
             }
         },
         "required": []  # No required fields, as everything can be extracted from context
@@ -67,7 +63,7 @@ class FileSave(BaseTool):
         # Use model to determine file parameters
         try:
             task_dir = self._get_task_dir_from_context()
-            file_name, file_type, extract_code = self._get_file_params_from_model(content, params)
+            file_name, file_type, extract_code = self._get_file_params_from_model(content)
         except Exception as e:
             logger.error(f"Error determining file parameters: {str(e)}")
             # Fall back to manual parameter extraction
@@ -76,18 +72,23 @@ class FileSave(BaseTool):
             file_type = params.get("file_type") or self._infer_file_type(content)
             extract_code = params.get("extract_code", False)
 
-        # If extract_code is True, extract code blocks from content
-        if extract_code:
-            extracted_content = self._extract_code_blocks(content)
-            if extracted_content:
-                content = extracted_content
-
         # Get team_name from context
         team_name = self._get_team_name_from_context() or "default_team"
 
         # Create directory structure
         task_dir_path = self.workspace_dir / team_name / task_dir
         task_dir_path.mkdir(parents=True, exist_ok=True)
+
+        if extract_code:
+            # Save the complete content as markdown
+            md_file_name = f"{file_name}.md"
+            md_file_path = task_dir_path / md_file_name
+
+            # Write content to file
+            with open(md_file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            return self._handle_multiple_code_blocks(content)
 
         # Ensure file_name has the correct extension
         if file_type and not file_name.endswith(f".{file_type}"):
@@ -96,73 +97,423 @@ class FileSave(BaseTool):
         # Create the full file path
         file_path = task_dir_path / file_name
 
+        # Get absolute path for storage in team_context
+        abs_file_path = file_path.absolute()
+
         try:
             # Write content to file
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
+            # Update the current agent's final_answer to include file information
+            if hasattr(self.context, 'team_context'):
+                # Store with absolute path in team_context
+                self.context.team_context.agent_outputs[-1].output += f"\n\nSaved file: {abs_file_path}"
+
             return ToolResult.success({
-                "file_path": str(file_path),
-                "file_name": file_name,
-                "file_type": file_type,
-                "task_dir": task_dir,
-                "size": len(content),
-                "message": f"Content successfully saved to {file_path}"
+                "status": "success",
+                "file_path": str(file_path)  # Return relative path in result
             })
 
         except Exception as e:
             return ToolResult.fail(f"Error saving file: {str(e)}")
 
-    def _get_file_params_from_model(self, content: str, params: Dict[str, Any]) -> Tuple[str, str, bool]:
+    def _handle_multiple_code_blocks(self, content: str) -> ToolResult:
         """
-        Use the model to determine file parameters based on content.
+        Handle content with multiple code blocks, extracting and saving each as a separate file.
 
-        :param content: The content to analyze
-        :param params: User-provided parameters that may override model decisions
-        :return: Tuple of (task_dir, file_name, file_type, extract_code)
+        :param content: The content containing multiple code blocks
+        :return: Result of the operation
         """
-        # Use user-provided parameters if available
-        if all(key in params for key in ["file_name", "file_type", "extract_code"]):
-            return (
-                params["file_name"],
-                params["file_type"],
-                params["extract_code"]
+        # Extract code blocks with context (including potential file name information)
+        code_blocks_with_context = self._extract_code_blocks_with_context(content)
+
+        if not code_blocks_with_context:
+            return ToolResult.fail("No code blocks found in the content.")
+
+        # Get task directory and team name
+        task_dir = self._get_task_dir_from_context() or f"task_{int(time.time())}"
+        team_name = self._get_team_name_from_context() or "default_team"
+
+        # Create directory structure
+        task_dir_path = self.workspace_dir / team_name / task_dir
+        task_dir_path.mkdir(parents=True, exist_ok=True)
+
+        saved_files = []
+
+        for block_with_context in code_blocks_with_context:
+            try:
+                # Use model to determine file name for this code block
+                block_file_name, block_file_type = self._get_filename_for_code_block(block_with_context)
+
+                # Clean the code block (remove md code markers)
+                clean_code = self._clean_code_block(block_with_context)
+
+                # Ensure file_name has the correct extension
+                if block_file_type and not block_file_name.endswith(f".{block_file_type}"):
+                    block_file_name = f"{block_file_name}.{block_file_type}"
+
+                # Create the full file path (no subdirectories)
+                file_path = task_dir_path / block_file_name
+
+                # Get absolute path for storage in team_context
+                abs_file_path = file_path.absolute()
+
+                # Write content to file
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(clean_code)
+
+                saved_files.append({
+                    "file_path": str(file_path),
+                    "abs_file_path": str(abs_file_path),  # Store absolute path for internal use
+                    "file_name": block_file_name,
+                    "size": len(clean_code),
+                    "status": "success",
+                    "type": "code"
+                })
+
+            except Exception as e:
+                logger.error(f"Error saving code block: {str(e)}")
+                # Continue with the next block even if this one fails
+
+        if not saved_files:
+            return ToolResult.fail("Failed to save any code blocks.")
+
+        # Update the current agent's final_answer to include files information
+        if hasattr(self, 'context') and self.context:
+            # If the agent has a final_answer attribute, append the files info to it
+            if hasattr(self.context, 'team_context'):
+                # Use relative paths for display
+                display_info = f"\n\nSaved files to {task_dir_path}:\n" + "\n".join(
+                    [f"- {f['file_path']}" for f in saved_files])
+
+                # Check if we need to append the info
+                if not self.context.team_context.agent_outputs[-1].output.endswith(display_info):
+                    # Store with absolute paths in team_context
+                    abs_info = f"\n\nSaved files to {task_dir_path.absolute()}:\n" + "\n".join(
+                        [f"- {f['abs_file_path']}" for f in saved_files])
+                    self.context.team_context.agent_outputs[-1].output += abs_info
+
+        result = {
+            "status": "success",
+            "files": [{"file_path": f["file_path"]} for f in saved_files]
+        }
+
+        return ToolResult.success(result)
+
+    def _extract_code_blocks_with_context(self, content: str) -> list:
+        """
+        Extract code blocks from content, including context lines before the block.
+
+        :param content: The content to extract code blocks from
+        :return: List of code blocks with context
+        """
+        # Check if content starts with <!DOCTYPE or <html - likely a full HTML file
+        if content.strip().startswith(("<!DOCTYPE", "<html", "<?xml")):
+            return [content]  # Return the entire content as a single block
+
+        # Split content into lines
+        lines = content.split('\n')
+
+        blocks = []
+        in_code_block = False
+        current_block = []
+        context_lines = []
+
+        # Check if there are any code block markers in the content
+        if not re.search(r'```\w+', content):
+            # If no code block markers and content looks like code, return the entire content
+            if self._is_likely_code(content):
+                return [content]
+
+        for line in lines:
+            if line.strip().startswith('```'):
+                if in_code_block:
+                    # End of code block
+                    current_block.append(line)
+                    # Only add blocks that have a language specified
+                    block_content = '\n'.join(current_block)
+                    if re.search(r'```\w+', current_block[0]):
+                        # Combine context with code block
+                        blocks.append('\n'.join(context_lines + current_block))
+                    current_block = []
+                    context_lines = []
+                    in_code_block = False
+                else:
+                    # Start of code block - check if it has a language specified
+                    if re.search(r'```\w+', line) and not re.search(r'```language=\s*$', line):
+                        # Start of code block with language
+                        in_code_block = True
+                        current_block = [line]
+                        # Keep only the last few context lines
+                        context_lines = context_lines[-5:] if context_lines else []
+
+            elif in_code_block:
+                current_block.append(line)
+            else:
+                # Store context lines when not in a code block
+                context_lines.append(line)
+
+        return blocks
+
+    def _get_filename_for_code_block(self, block_with_context: str) -> Tuple[str, str]:
+        """
+        Determine the file name for a code block.
+
+        :param block_with_context: The code block with context lines
+        :return: Tuple of (file_name, file_type)
+        """
+        # Define common code file extensions
+        COMMON_CODE_EXTENSIONS = {
+            'py', 'js', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rb', 'php',
+            'html', 'css', 'ts', 'jsx', 'tsx', 'vue', 'sh', 'sql', 'json', 'xml',
+            'yaml', 'yml', 'md', 'rs', 'swift', 'kt', 'scala', 'pl', 'r', 'lua'
+        }
+
+        # Split the block into lines to examine only the context around code block markers
+        lines = block_with_context.split('\n')
+
+        # Find the code block start marker line index
+        start_marker_idx = -1
+        for i, line in enumerate(lines):
+            if line.strip().startswith('```') and not line.strip() == '```':
+                start_marker_idx = i
+                break
+
+        if start_marker_idx == -1:
+            # No code block marker found
+            return "", ""
+
+        # Extract the language from the code block marker
+        code_marker = lines[start_marker_idx].strip()
+        language = ""
+        if len(code_marker) > 3:
+            language = code_marker[3:].strip().split('=')[0].strip()
+
+        # Define the context range (5 lines before and 2 after the marker)
+        context_start = max(0, start_marker_idx - 5)
+        context_end = min(len(lines), start_marker_idx + 3)
+
+        # Extract only the relevant context lines
+        context_lines = lines[context_start:context_end]
+
+        # First, check for explicit file headers like "## filename.ext"
+        for line in context_lines:
+            # Match patterns like "## filename.ext" or "# filename.ext"
+            header_match = re.search(r'^\s*#{1,6}\s+([a-zA-Z0-9_-]+\.[a-zA-Z0-9]+)\s*$', line)
+            if header_match:
+                file_name = header_match.group(1)
+                file_type = os.path.splitext(file_name)[1].lstrip('.')
+                if file_type in COMMON_CODE_EXTENSIONS:
+                    return os.path.splitext(file_name)[0], file_type
+
+        # Simple patterns to match explicit file names in the context
+        file_patterns = [
+            # Match explicit file names in headers or text
+            r'(?:file|filename)[:=\s]+[\'"]?([a-zA-Z0-9_-]+\.[a-zA-Z0-9]+)[\'"]?',
+            # Match language=filename.ext in code markers
+            r'language=([a-zA-Z0-9_-]+\.[a-zA-Z0-9]+)',
+            # Match standalone filenames with extensions
+            r'\b([a-zA-Z0-9_-]+\.(py|js|java|c|cpp|h|hpp|cs|go|rb|php|html|css|ts|jsx|tsx|vue|sh|sql|json|xml|yaml|yml|md|rs|swift|kt|scala|pl|r|lua))\b',
+            # Match file paths in comments
+            r'#\s*([a-zA-Z0-9_/-]+\.[a-zA-Z0-9]+)'
+        ]
+
+        # Check each context line for file name patterns
+        for line in context_lines:
+            line = line.strip()
+            for pattern in file_patterns:
+                matches = re.findall(pattern, line)
+                if matches:
+                    for match in matches:
+                        if isinstance(match, tuple):
+                            # If the match is a tuple (filename, extension)
+                            file_name = match[0]
+                            file_type = match[1]
+                            # Verify it's not a code reference like Direction.DOWN
+                            if not any(keyword in file_name for keyword in ['class.', 'enum.', 'import.']):
+                                return os.path.splitext(file_name)[0], file_type
+                        else:
+                            # If the match is a string (full filename)
+                            file_name = match
+                            file_type = os.path.splitext(file_name)[1].lstrip('.')
+                            # Verify it's not a code reference
+                            if file_type in COMMON_CODE_EXTENSIONS and not any(
+                                    keyword in file_name for keyword in ['class.', 'enum.', 'import.']):
+                                return os.path.splitext(file_name)[0], file_type
+
+        # If no explicit file name found, use LLM to infer from code content
+        # Extract the code content
+        code_content = block_with_context
+
+        # Get the first 20 lines of code for LLM analysis
+        code_lines = code_content.split('\n')
+        code_preview = '\n'.join(code_lines[:20])
+
+        # Get the model to use
+        model_to_use = None
+        if hasattr(self, 'context') and self.context:
+            if hasattr(self.context, 'model') and self.context.model:
+                model_to_use = self.context.model
+            elif hasattr(self.context, 'team_context') and self.context.team_context:
+                if hasattr(self.context.team_context, 'model') and self.context.team_context.model:
+                    model_to_use = self.context.team_context.model
+
+        # If no model is available in context, use the tool's model
+        if not model_to_use and hasattr(self, 'model') and self.model:
+            model_to_use = self.model
+
+        if model_to_use:
+            # Prepare a prompt for the model
+            prompt = f"""Analyze the following code and determine the most appropriate file name and file type/extension.
+The file name should be descriptive but concise, using snake_case (lowercase with underscores).
+The file type should be a standard file extension (e.g., py, js, html, css, java).
+
+Code preview (first 20 lines):
+{code_preview}
+
+Return your answer in JSON format with these fields:
+- file_name: The suggested file name (without extension)
+- file_type: The suggested file extension
+
+JSON response:"""
+
+            # Create a request to the model
+            request = LLMRequest(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                json_format=True
             )
 
-        # Prepare a prompt for the model
+            try:
+                response = model_to_use.call(request)
+
+                if not response.is_error:
+                    # Clean the JSON response
+                    json_content = self._clean_json_response(response.data["choices"][0]["message"]["content"])
+                    result = json.loads(json_content)
+
+                    file_name = result.get("file_name", "")
+                    file_type = result.get("file_type", "")
+
+                    if file_name and file_type:
+                        return file_name, file_type
+            except Exception as e:
+                logger.error(f"Error using model to determine file name: {str(e)}")
+
+        # If we still don't have a file name, use the language as file type
+        if language and language in COMMON_CODE_EXTENSIONS:
+            timestamp = int(time.time())
+            return f"code_{timestamp}", language
+
+        # If all else fails, return empty strings
+        return "", ""
+
+    def _clean_json_response(self, text: str) -> str:
+        """
+        Clean JSON response from LLM by removing markdown code block markers.
+        
+        :param text: The text containing JSON possibly wrapped in markdown code blocks
+        :return: Clean JSON string
+        """
+        # Remove markdown code block markers if present
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            # Find the first newline to skip the language identifier line
+            first_newline = text.find('\n')
+            if first_newline != -1:
+                text = text[first_newline + 1:]
+
+        if text.endswith("```"):
+            text = text[:-3]
+
+        return text.strip()
+
+    def _clean_code_block(self, block_with_context: str) -> str:
+        """
+        Clean a code block by removing markdown code markers and context lines.
+        
+        :param block_with_context: Code block with context lines
+        :return: Clean code ready for execution
+        """
+        # Check if this is a full HTML or XML document
+        if block_with_context.strip().startswith(("<!DOCTYPE", "<html", "<?xml")):
+            return block_with_context
+
+        # Find the code block
+        code_block_match = re.search(r'```(?:\w+)?(?:[:=][^\n]+)?\n([\s\S]*?)\n```', block_with_context)
+
+        if code_block_match:
+            return code_block_match.group(1)
+
+        # If no match found, try to extract anything between ``` markers
+        lines = block_with_context.split('\n')
+        start_idx = None
+        end_idx = None
+
+        for i, line in enumerate(lines):
+            if line.strip().startswith('```'):
+                if start_idx is None:
+                    start_idx = i
+                else:
+                    end_idx = i
+                    break
+
+        if start_idx is not None and end_idx is not None:
+            # Extract the code between the markers, excluding the markers themselves
+            code_lines = lines[start_idx + 1:end_idx]
+            return '\n'.join(code_lines)
+
+        # If all else fails, return the original content
+        return block_with_context
+
+    def _get_file_params_from_model(self, content, model=None):
+        """
+        Use LLM to determine if the content is code and suggest appropriate file parameters.
+        
+        Args:
+            content: The content to analyze
+            model: Optional model to use for the analysis
+            
+        Returns:
+            tuple: (file_name, file_type, extract_code) for backward compatibility
+        """
+        if model is None:
+            model = self.model
+
+        if not model:
+            # Default fallback if no model is available
+            return "output", "txt", False
+
         prompt = f"""
-Analyze the following content and determine the best file parameters for saving it.
-Return your answer in JSON format with the following fields:
-- file_name: A descriptive name for the file without extension (use snake_case)
-- file_type: The appropriate file extension (e.g., 'py', 'md', 'txt', 'js', 'html', 'css', 'json')
-- extract_code: Boolean indicating whether code blocks should be extracted from the content
-
-Content preview (first 1000 characters):
-{content[:1000]}
-{"..." if len(content) > 1000 else ""}
-
-Return only valid JSON without any additional text.
-"""
-
-        # Create a request to the model
-        request = LLMRequest(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            json_format=True
-        )
-
-        # Use the model to get file parameters
-        if not self.model:
-            # If no model is available, use default parameters
-            logger.warning("No model available for file parameter inference, using defaults")
-            return (
-                self._infer_file_name(content),
-                self._infer_file_type(content),
-                self._is_likely_code(content)
-            )
+        Analyze the following content and determine:
+        1. Is this primarily code implementation (where most of the content consists of code blocks)?
+        2. What would be an appropriate filename and file extension?
+        
+        Content to analyze:    ```
+        {content[:500]}  # Only show first 500 chars to avoid token limits    ```
+        
+        {"..." if len(content) > 500 else ""}
+        
+        Respond in JSON format only with the following structure:
+        {{
+            "is_code": true/false,  # Whether this is primarily code implementation
+            "filename": "suggested_filename",  # Don't include extension, english words
+            "extension": "appropriate_extension"  # Don't include the dot, e.g., "md", "py", "js"
+        }}
+        """
 
         try:
-            response = self.model.call(request)
+            # Create a request to the model
+            request = LLMRequest(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                json_format=True
+            )
+
+            # Call the model using the standard interface
+            response = model.call(request)
 
             if response.is_error:
                 logger.warning(f"Error from model: {response.error_message}")
@@ -171,41 +522,23 @@ Return only valid JSON without any additional text.
             # Extract JSON from response
             result = response.data["choices"][0]["message"]["content"]
 
-            # Clean up the result to ensure it's valid JSON
-            result = result.strip()
-            if result.startswith("```json"):
-                result = result[7:]
-            if result.endswith("```"):
-                result = result[:-3]
-            result = result.strip()
+            # Clean the JSON response
+            result = self._clean_json_response(result)
 
             # Parse the JSON
-            params_dict = json.loads(result)
+            params = json.loads(result)
 
-            # Extract and validate parameters
-            file_name = params_dict.get("file_name", "").strip()
-            file_type = params_dict.get("file_type", "").strip()
-            extract_code = params_dict.get("extract_code", False)
-
-            # Apply fallbacks for empty values
-            if not file_name:
-                file_name = self._infer_file_name(content)
-            if not file_type:
-                file_type = self._infer_file_type(content)
-
-            # Sanitize values
-            file_name = self._sanitize_filename(file_name)
+            # For backward compatibility, return tuple format
+            file_name = params.get("filename", "output")
+            # Remove dot from extension if present
+            file_type = params.get("extension", "md").lstrip(".")
+            extract_code = params.get("is_code", False)
 
             return file_name, file_type, extract_code
-
         except Exception as e:
-            logger.error(f"Error processing model response: {str(e)}")
-            # Fall back to default parameters
-            return (
-                self._infer_file_name(content),
-                self._infer_file_type(content),
-                self._is_likely_code(content)
-            )
+            logger.warning(f"Error getting file parameters from model: {e}")
+            # Default fallback
+            return "output", "md", False
 
     def _get_team_name_from_context(self) -> Optional[str]:
         """
@@ -365,10 +698,19 @@ Return only valid JSON without any additional text.
 
     def _is_likely_code(self, content: str) -> bool:
         """Check if the content is likely code."""
+        # First check for common HTML/XML patterns
+        if content.strip().startswith(("<!DOCTYPE", "<html", "<?xml", "<head", "<body")):
+            return True
+
         code_patterns = [
             r'(class|def|function|import|from|public|private|protected|#include)',
             r'(\{\s*\n|\}\s*\n|\[\s*\n|\]\s*\n)',
-            r'(if\s*\(|for\s*\(|while\s*\()'
+            r'(if\s*\(|for\s*\(|while\s*\()',
+            r'(<\w+>.*?</\w+>)',  # HTML/XML tags
+            r'(var|let|const)\s+\w+\s*=',  # JavaScript variable declarations
+            r'#\s*\w+',  # CSS ID selectors or Python comments
+            r'\.\w+\s*\{',  # CSS class selectors
+            r'@media|@import|@font-face'  # CSS at-rules
         ]
         return any(re.search(pattern, content) for pattern in code_patterns)
 
@@ -413,3 +755,16 @@ Return only valid JSON without any additional text.
             name = name[:50]
 
         return name.lower()
+
+    def _process_file_path(self, file_path: str) -> Tuple[str, str]:
+        """
+        Process a file path to extract the file name and type, and create directories if needed.
+        
+        :param file_path: The file path to process
+        :return: Tuple of (file_name, file_type)
+        """
+        # Get the file name and extension
+        file_name = os.path.basename(file_path)
+        file_type = os.path.splitext(file_name)[1].lstrip('.')
+
+        return os.path.splitext(file_name)[0], file_type

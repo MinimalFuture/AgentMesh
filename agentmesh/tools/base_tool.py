@@ -85,3 +85,13 @@ class BaseTool:
         """
         # Only tools in post-process stage will be automatically executed
         return self.stage == ToolStage.POST_PROCESS
+
+    def close(self):
+        """
+        Close any resources used by the tool.
+        This method should be overridden by tools that need to clean up resources
+        such as browser connections, file handles, etc.
+
+        By default, this method does nothing.
+        """
+        pass

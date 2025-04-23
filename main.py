@@ -49,8 +49,8 @@ def create_team_from_config(team_name):
         else:
             agent_model = team_model
 
-        # Get agent's max_steps (default to 10 if not specified)
-        agent_max_steps = agent_config.get("max_steps", 10)
+        # Get agent's max_steps
+        agent_max_steps = agent_config.get("max_steps")
 
         agent = Agent(
             name=agent_config.get("name", ""),

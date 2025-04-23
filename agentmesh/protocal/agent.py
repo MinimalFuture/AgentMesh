@@ -93,9 +93,12 @@ The content of thought and final_answer needs to be consistent with the language
 ## Current task context:
 Current time: {formatted_time}
 Team description: {self.team_context.description}
-Other agents output: {self._fetch_agents_outputs()}
 
-Your sub task: {self.subtask}"""
+## Other agents output:
+{self._fetch_agents_outputs()}
+
+## Your sub task
+{self.subtask}"""
 
         return tools_prompt + ext_data_prompt + current_task_prompt
 
@@ -129,7 +132,6 @@ Your sub task: {self.subtask}"""
         """
         final_answer = None
         current_step = 0
-        raw_response = ""
 
         # Initialize captured actions list (if it doesn't exist)
         if not hasattr(self, 'captured_actions'):
@@ -144,9 +146,17 @@ Your sub task: {self.subtask}"""
 
         # Use max_steps if set, otherwise continue until final answer is found
         while (self.max_steps is None or current_step < self.max_steps) and not final_answer:
+            # Check if team's max_steps will be exceeded with this step
+            if self.team_context.current_steps >= self.team_context.max_steps:
+                logger.warning(f"Team's max steps ({self.team_context.max_steps}) reached. Stopping agent execution.")
+                return AgentResult.error("Team's max steps reached", current_step)
+
+            # Increment team's step counter
+            self.team_context.current_steps += 1
+
             user_prompt = self._build_react_prompt() + "\n\n## Historical steps:\n"
             if self.action_history:
-                user_prompt += f"\n{json.dumps(self.action_history[-5:], ensure_ascii=False, indent=4)}"
+                user_prompt += f"\n{json.dumps(self.action_history[-10:], ensure_ascii=False, indent=4)}"
             messages = [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -163,15 +173,13 @@ Your sub task: {self.subtask}"""
                 stream=self.output_mode == "print"  # Only stream in print mode
             )
 
-            # Start loading animation before getting model response (only in print mode)
-            loading = None
+            # Get model response based on output mode
             if self.output_mode == "print":
+                # Start loading animation before getting model response (only in print mode)
                 print()
                 loading = LoadingIndicator(message="Thinking...", animation_type="spinner")
                 loading.start()
 
-            # Get model response based on output mode
-            if self.output_mode == "print":
                 # Stream response in print mode
                 stream_response = model_to_use.call_stream(request)
                 parser = XmlResParser()
@@ -290,6 +298,7 @@ Your sub task: {self.subtask}"""
                     })
             else:
                 # No action, end loop
+                self.output("No action error, end step")
                 break
 
             current_step += 1
@@ -315,9 +324,11 @@ Your sub task: {self.subtask}"""
 
             # Log result
             if result.status == "success":
-                logger.info(f"Post-process tool {tool.name} executed successfully: {result.result.get('message', '')}")
+                # Print tool execution result in the desired format
+                self.output(f"\n🛠️ {tool.name}: {json.dumps(result.result)}")
             else:
-                logger.warning(f"Post-process tool {tool.name} failed: {result.result}")
+                # Print failure in print mode
+                self.output(f"\n🛠️ {tool.name}: {json.dumps({'status': 'error', 'message': str(result.result)})}")
 
     def should_invoke_next_agent(self) -> int:
         """

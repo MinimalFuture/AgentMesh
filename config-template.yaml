@@ -18,38 +18,51 @@ tools:
     # get your apikey from https://serper.dev/
     api_key: "YOUR_SERPER_API_KEY"
 
+
 # Team config
 teams:
-  software_team:
-    model: "gpt-4.1-mini"
-    description: "A software development team with product manager, architect, and developer"
-    max_steps: 20          # Maximum total steps in this team
-    agents:
-      - name: "Product Manager"
-        description: "Responsible for product requirements and documentation"
-        system_prompt: "You are an experienced product manager who creates clear and comprehensive PRDs. Focus on user needs, feature specifications, and acceptance criteria."
-        tools:
-          - time
-      - name: "Architect"
-        description: "Designs system architecture and selects technologies"
-        system_prompt: "You are a skilled software architect who designs robust and scalable system architectures. Provide technical specifications and architecture diagram justify your technology choices."
-        tools:
-          - calculator
-      - name: "Developer"
-        description: "Implements code based on PRD and architecture design"
-        system_prompt: "You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements and architecture guidelines precisely."
-        tools:
-          - time
-          - calculator
-
   search_team:
     model: "gpt-4.1-mini"
     description: "A Search Assistant Team"
     agents:
       - name: "Search Assistant"
         description: "Searching by operating the browser"
-        system_prompt: "You are a browser operation assistant, completing user tasks by executing search tool and operating the browser"
+        system_prompt: "You are a browser operation assistant, completing user tasks by operating the browser"
+        tools:
+          - time
+          - google_search
+          - browser
+          - file_save
+
+  software_team:
+    model: "gpt-4.1-mini"
+    description: "A software development team with product manager, architect, developer and tester"
+    rule: ""
+    max_steps: 20
+    agents:
+      - name: "Product Manager"
+        max_steps: 5
+        description: "Responsible for product requirements and documentation"
+        system_prompt: "You are an experienced product manager who creates concise PRD. Focus on user needs and feature specifications. Always format your response in Markdown."
+        tools:
+          - time
+          - file_save
+      - name: "Architect"
+        description: "Designs system architecture and selects technologies"
+        system_prompt: "You are a senior software architect. Provide concise technical specifications focused on technology selection and system architecture design. Always format your response in Markdown."
+        tools:
+          - calculator
+          - file_save
+      - name: "Developer"
+        description: "Implements code based on PRD and architecture design"
+        system_prompt: "You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements and architecture guidelines precisely."
         tools:
           - time
           - calculator
+          - file_save
+      - name: "Tester"
+        description: "Tests code and verifies functionality"
+        system_prompt: "You are a thorough QA tester who validates code against requirements. For HTML code, you can use browser to test functionality."
+        tools:
           - browser
+          - file_save

@@ -27,7 +27,7 @@ class AgentTeam:
         self.description = description
         self.rule = rule
         self.agents = []
-        self.context = TeamContext(name, description, rule, agents=self.agents)
+        self.context = TeamContext(name, description, rule, agents=self.agents, max_steps=max_steps)
         self.model: LLMModel = model  # Instance of LLMModel
         self.max_steps = max_steps  # Maximum total steps across all agents
         self.task_short_name = ""
@@ -247,9 +247,13 @@ class AgentTeam:
                 # Print task completion information
                 output(f"\nTeam {self.name} completed the task")
 
+                # Clean up resources before returning
+                self.cleanup()
+
                 return result
             else:
                 output("No agent found with the selected id.")
+                self.cleanup()
                 result.complete("failed")
                 return result
 
@@ -262,8 +266,26 @@ class AgentTeam:
             logger.error(error_msg)
             logger.debug(f"Error details: {detail_msg}")
 
+            # Clean up resources even when exception occurs
+            self.cleanup()
+
             result.complete("failed")
             return result
+
+    def cleanup(self):
+        """
+        Clean up resources used by the team and its agents.
+        This includes closing browser connections, file handles, etc.
+        """
+        # Clean up resources for each agent
+        for agent in self.agents:
+            # Clean up tools for each agent
+            if hasattr(agent, 'tools'):
+                for tool in agent.tools:
+                    try:
+                        tool.close()
+                    except Exception as e:
+                        logger.warning(f"Error closing tool {tool.name}: {str(e)}")
 
 
 GROUP_DECISION_PROMPT = """## Role

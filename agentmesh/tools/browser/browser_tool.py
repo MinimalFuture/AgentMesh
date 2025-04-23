@@ -56,7 +56,7 @@ class BrowserTool(BaseTool):
             },
             "url": {
                 "type": "string",
-                "description": f"The URL to navigate to (required for '{Navigate.code}', '{OpenTab.code}' actions)."
+                "description": f"The URL to navigate to (required for '{Navigate.code}', '{OpenTab.code}' actions). "
             },
             "goal": {
                 "type": "string",
@@ -174,6 +174,8 @@ The following is the information of the current browser page. Each serial number
             url = params.get("url")
             if not url:
                 return ToolResult.fail(result="URL is required for navigate action")
+            if url.startswith("/"):
+                url = f"file://{url}"
             print(f"Navigating to {url}...")
             page = await context.get_current_page()
             await page.goto(url)
@@ -185,6 +187,8 @@ The following is the information of the current browser page. Each serial number
 
         elif action == OpenTab.code:
             url = params.get("url")
+            if url.startswith("/"):
+                url = f"file://{url}"
             await context.create_new_tab(url)
             msg = f"Opened new tab with {url}"
             return ToolResult.success(result=msg)
@@ -262,3 +266,43 @@ The following is the information of the current browser page. Each serial number
         else:
             msg = "Failed to operate the browser"
             return ToolResult.fail(result=msg)
+
+    def close(self):
+        """
+        Close browser resources.
+        This method handles the asynchronous closing of browser and browser context.
+        """
+        if not BrowserTool._initialized:
+            return
+
+        try:
+            # Use the existing event loop to close browser resources
+            if BrowserTool._event_loop is not None:
+                # Define the async close function
+                async def close_browser_async():
+                    if BrowserTool.browser_context is not None:
+                        try:
+                            await BrowserTool.browser_context.close()
+                        except Exception as e:
+                            logger.error(f"Error closing browser context: {e}")
+
+                    if BrowserTool.browser is not None:
+                        try:
+                            await BrowserTool.browser.close()
+                        except Exception as e:
+                            logger.error(f"Error closing browser: {e}")
+
+                    # Reset the initialized flag
+                    BrowserTool._initialized = False
+                    BrowserTool.browser = None
+                    BrowserTool.browser_context = None
+                    BrowserTool.dom_service = None
+
+                # Run the async close function in the existing event loop
+                BrowserTool._event_loop.run_until_complete(close_browser_async())
+
+                # Close the event loop
+                BrowserTool._event_loop.close()
+                BrowserTool._event_loop = None
+        except Exception as e:
+            print(f"Error during browser cleanup: {e}")
