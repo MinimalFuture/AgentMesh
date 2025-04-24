@@ -86,7 +86,8 @@ Please respond strictly in the following format:
 <final_answer> The final answer should be as detailed and rich as possible. If there is no final answer, do not show this label </final_answer>
 
 ## Attention
-The content of thought and final_answer needs to be consistent with the language used by the user original task.
+1. The content of thought and final_answer needs to be consistent with the language used by the user original task.
+2. Make only one decision at a time. Do not generate multiple tool calls in a single response.
 """
 
         current_task_prompt = f"""

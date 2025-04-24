@@ -17,10 +17,10 @@ class TaskType(Enum):
 
 class TaskStatus(Enum):
     """Enum representing the status of a task."""
-    INIT = "init"  # 初始状态
-    PROCESSING = "processing"  # 处理中
-    COMPLETED = "completed"  # 已完成
-    FAILED = "failed"  # 失败
+    INIT = "init"  # Initial state
+    PROCESSING = "processing"  # In progress
+    COMPLETED = "completed"  # Completed
+    FAILED = "failed"  # Failed
 
 
 @dataclass

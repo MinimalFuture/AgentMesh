@@ -38,7 +38,7 @@ class ToolManager:
         # Then, configure tools from config file
         self._configure_tools_from_config()
 
-        print(f"Loaded {len(self.tools)} tools: {', '.join(self.tools.keys())}")
+        # print(f"Loaded {len(self.tools)} tools: {', '.join(self.tools.keys())}")
 
     def _load_tools_from_directory(self, tools_dir: str):
         """Dynamically load tools from directory using file loading"""

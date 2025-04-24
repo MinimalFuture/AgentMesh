@@ -81,7 +81,7 @@ class AgentTeam:
         self.context.model = self.model  # Set the model in the context
 
         # Print user task and team information
-        output(f"User Task: {task.get_text()}")
+        output("")
         output(f"Team {self.name} received the task and started processing")
         output("")
 

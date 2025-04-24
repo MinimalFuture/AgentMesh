@@ -8,6 +8,7 @@ models:
     models: [ "gpt-4.1", "gpt-4o", "gpt-4.1-mini" ]
 
   claude:
+    api_base: "https://api.anthropic.com/v1"
     api_key: "YOUR_API_KEY"
     models: [ "claude-3-7-sonnet-latest" ]
 
@@ -21,15 +22,24 @@ tools:
 
 # Team config
 teams:
-  search_team:
-    model: "gpt-4.1-mini"
-    description: "A Search Assistant Team"
+  general_team:
+    model: "gpt-4.1"
+    description: "A versatile research and information agent team"
+    max_steps: 10
     agents:
-      - name: "Search Assistant"
-        description: "Searching by operating the browser"
-        system_prompt: "You are a browser operation assistant, completing user tasks by operating the browser"
+      - name: "General Agent"
+        description: "Universal assistant specializing in research and information synthesis"
+        system_prompt: |
+          You are a versatile assistant who answers questions and completes tasks using available tools. Specialize in researching topics, organizing information, and presenting findings in clear, well-structured, informative Markdown reports. Your reports should include:
+            1. Clear introduction and context
+            2. Detailed main content with relevant facts, data, and examples
+            3. Multiple perspectives when appropriate
+            4. Visual elements (tables, lists) to organize complex information
+            5. Proper citations and references to sources
+            6. Concise yet comprehensive summaries and conclusions
         tools:
           - time
+          - calculator
           - google_search
           - browser
           - file_save
@@ -41,22 +51,19 @@ teams:
     max_steps: 20
     agents:
       - name: "Product Manager"
-        max_steps: 5
         description: "Responsible for product requirements and documentation"
-        system_prompt: "You are an experienced product manager who creates concise PRD. Focus on user needs and feature specifications. Always format your response in Markdown."
+        system_prompt: "You are an experienced product manager who creates concise PRDs, focusing on user needs and feature specifications. You always format your responses in Markdown."
         tools:
           - time
           - file_save
       - name: "Developer"
         description: "Implements code based on PRD"
-        system_prompt: "You are a proficient developer who writes clean, efficient, and maintainable code."
+        system_prompt: "You are a skilled web developer who creates single-page website based on user needs. You deliver HTML files with embedded JavaScript and CSS that are visually appealing, responsive, and user-friendly, featuring a grand layout and beautiful background. The HTML, CSS, and JavaScript code should be well-structured and effectively organized."
         tools:
-          - time
-          - calculator
           - file_save
       - name: "Tester"
         description: "Tests code and verifies functionality"
-        system_prompt: "You are a QA tester who validates code against requirements. For HTML code, you can use browser to test functionality. You only need to test a few core cases, the final output is the markdown test report"
+        system_prompt: "You are a tester who validates code against requirements. For HTML applications, use browser tools to test functionality. You only need to test a few core cases."
         tools:
           - browser
           - file_save
