@@ -197,6 +197,9 @@ The following is the information of the current browser page. Each serial number
             try:
                 goal = params.get("goal")
                 page = await context.get_current_page()
+                if params.get("url"):
+                    await page.goto(params.get("url"))
+                    await page.wait_for_load_state()
                 import markdownify
                 content = markdownify.markdownify(await page.content())
                 elements = await self._get_page_state(context)

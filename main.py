@@ -64,7 +64,7 @@ def create_team_from_config(team_name):
         tool_names = agent_config.get("tools", [])
         tool_manager = ToolManager()
         for tool_name in tool_names:
-            tool = tool_manager.get_tool(tool_name)
+            tool = tool_manager.create_tool(tool_name)
             if tool:
                 agent.add_tool(tool)
             else:
@@ -100,6 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description="AgentMesh - Multi-Agent Framework")
     parser.add_argument("-t", "--team", help="Specify the team to run")
     parser.add_argument("-l", "--list", action="store_true", help="List available teams")
+    parser.add_argument("-q", "--query", help="Direct query to run (non-interactive mode)")
     args = parser.parse_args()
 
     # Load configuration
@@ -123,6 +124,17 @@ def main():
     if not team:
         return
 
+    # If a direct query is provided, run it in non-interactive mode
+    if args.query:
+        print(f"Team '{team.name}' loaded successfully.")
+        print(f"User task: {args.query}")
+        print()
+
+        # Run the team with the user's query
+        team.run(Task(content=args.query), output_mode="print")
+        return
+
+    # Otherwise, run in interactive mode
     print(f"Team '{team.name}' loaded successfully.")
     print(f"Description: {team.description}")
     print(f"Number of agents: {len(team.agents)}")

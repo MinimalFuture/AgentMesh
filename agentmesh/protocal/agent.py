@@ -45,6 +45,12 @@ class Agent:
                 self.add_tool(tool)
 
     def add_tool(self, tool: BaseTool):
+        """
+        Add a tool to the agent.
+
+        :param tool: The tool to add (either a tool instance or a tool name)
+        """
+        # If tool is already an instance, use it directly
         tool.model = self.model
         self.tools.append(tool)
 

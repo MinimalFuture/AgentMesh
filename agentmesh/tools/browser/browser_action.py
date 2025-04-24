@@ -19,7 +19,7 @@ class ClickElement(BrowserAction):
 class ExtractContent(BrowserAction):
     """Extract content from the page"""
     code = "extract_content"
-    description = "Extract page content to retrieve specific information for a goal"
+    description = "Extract the page content to retrieve specific information for a goal"
 
 
 class InputText(BrowserAction):

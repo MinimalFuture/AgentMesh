@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 from agentmesh.models.llm.base_model import LLMModel
 from agentmesh.common import logger
+import copy
 
 
 class ToolStage(Enum):
