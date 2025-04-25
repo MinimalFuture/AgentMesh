@@ -1,4 +1,4 @@
-<p align="center"><img src= "https://github.com/user-attachments/assets/743bb0da-3070-4e89-b744-e7b3ab886fe8" alt="AgentMesh" width="450" /></p>
+<p align="center"><img src= "https://github.com/user-attachments/assets/33d7a875-f64d-422f-8b51-68fb420c81e2" alt="AgentMesh" width="450" /></p>
 
 English | <a href="/docs/README-CN.md">中文</a>
 
