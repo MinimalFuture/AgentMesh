@@ -71,7 +71,7 @@ Add your model `api_key` - AgentMesh supports `openai`, `claude`, `deepseek`, `q
 > - `general_team`: A general-purpose agent for search and research tasks.
 > - `software_team`: A development team with three roles that collaborates on web applications.
 >
-> You can customize models, tools, and system prompts for each agent.
+> You can add your own custom teams, and customize models, tools, and system prompts for each agent.
 
 #### 1.3 Execution
 
