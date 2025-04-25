@@ -63,19 +63,57 @@ cp config-template.yaml config.yaml
 
 Add your model `api_key` - AgentMesh supports `openai`, `claude`, `deepseek`, `qwen`, and others.
 
-> The template includes a pre-configured `software_team` with three roles (PM, architect, engineer) that collaborate on
-> software development tasks.
+The template includes two examples for quick testing:
+
+- `general_team`: A single general-purpose agent skilled in search, research, and information organization. Recommended to configure with google_search and browser tools.
+- `software_team`: A development team with three roles (product manager, engineer, and tester) that can collaborate on web application development and testing tasks, delivering complete project documentation and code.
+
+You can modify the template to customize different models, tools, system prompts, and other configurations for each agent.
 
 #### 1.3 Execution
 
+You can run tasks directly using command-line arguments, specifying the team with `-t` and your question with `-q`:
+
 ```bash
-python main.py -l                   # List available agent teams
-python main.py -t software_team     # Run the 'software_team'
+python main.py -t general_team -q "analyze the trends in multi-agent technology"
+python main.py -t software_team -q "develop a simple trial booking page for AgentMesh multi-agent platform"
 ```
 
-Enter your requirements in the interactive prompt to begin.
+Alternatively, enter interactive mode for multi-turn conversations:
 
-### 2. SDK
+```bash
+python main.py -l                               # List available agent teams
+python main.py -t software_team                 # Run the 'software_team'
+```
+
+### 2. Docker
+
+Download the docker-compose configuration file:
+
+```bash
+curl -O https://raw.githubusercontent.com/MinimalFuture/AgentMesh/main/docker-compose.yml
+```
+
+Download the configuration template and add your model API keys (see section 1.2 for configuration details):
+
+```bash
+curl -o config.yaml https://raw.githubusercontent.com/MinimalFuture/AgentMesh/main/config-template.yaml
+```
+
+Run the Docker container:
+
+```bash
+docker-compose run --rm agentmesh bash
+```
+
+Once the container starts, you'll enter the command line. The usage is the same as in section 1.3 - specify a team to start the interactive mode:
+
+```bash
+python main.py -l                               # List available agent teams
+python main.py -t general_team                  # Start multi-turn conversation with the specified team
+```
+
+### 3. SDK
 
 Use the AgentMesh SDK to build custom agent teams programmatically:
 
@@ -90,7 +128,7 @@ from agentmesh import AgentTeam, Agent, LLMModel
 from agentmesh.tools import *
 
 # Initialize model
-model = LLMModel(model="gpt-4o", api_key="YOUR_API_KEY")
+model = LLMModel(model="gpt-4.1", api_key="YOUR_API_KEY")
 
 # Create team and add agents
 team = AgentTeam(name="software_team", description="A software development team", model=model)
@@ -106,7 +144,7 @@ team.add(Agent(name="Developer", description="Implements code based on requireme
 result = team.run(task="Write a Snake client game")
 ```
 
-### 3. Web Service
+### 4. Web Service
 
 Coming soon
 
@@ -139,7 +177,7 @@ Coming soon
 
 ## Contribution
 
-Star this project to receive notifications about updates.
+⭐️ Star this project to receive notifications about updates.
 
 Feel free to [submit PRs](https://github.com/MinimalFuture/AgentMesh/pulls) to contribute to this project.
 For issues or ideas, please [open an issue](https://github.com/MinimalFuture/AgentMesh/issues).

@@ -24,7 +24,7 @@ tools:
 teams:
   general_team:
     model: "gpt-4.1"
-    description: "A versatile research and information agent team"
+    description: "A general-purpose research and information agent team"
     max_steps: 10
     agents:
       - name: "General Agent"

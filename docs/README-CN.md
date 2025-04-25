@@ -1,9 +1,8 @@
 <p align="center"><img src= "https://github.com/user-attachments/assets/743bb0da-3070-4e89-b744-e7b3ab886fe8" alt="AgentMesh" width="450" /></p>
 
-
 <a href="/README.md">English</a> | 中文
 
-AgentMesh是一个开源的 **多智能体 (Multi-agent) 平台** ，提供开箱即用的Agent开发框架、多Agent间的协同策略、任务规划和自主决策能力。
+AgentMesh是一个开源的 **多智能体 (Multi-Agent) 平台** ，提供开箱即用的Agent开发框架、多Agent间的协同策略、任务规划和自主决策能力。
 在该平台上可以快速构建你的Agent团队，通过多Agent之间的协同完成任务。
 
 ## 概述
@@ -19,7 +18,7 @@ AgentMesh 采用模块化分层设计，提供灵活且可扩展的多智能体�
 
 提供三种使用方式快速构建并运行你的 Agent Team：
 
-### 1.终端运行
+### 1. 终端运行
 
 在终端中命令行中快速运行多智能体团队:
 
@@ -60,20 +59,59 @@ cp config-template.yaml config.yaml
 
 填写需要用到的模型 `api_key`，支持 `openai`、`claude`、`deepseek`、`qwen` 等模型。
 
-配置模板中预置了一个名为 `software_team` 的Agent开发团队，包含产品经理、架构师、工程师三种角色，可以协作完成软件开发任务。
+配置模板中预置了两个示例供快速体验：
+
+- `general_team`：包含一个通用Agent，擅长进行搜索、研究、信息整理。建议配置 google_search 和 browser 工具
+- `software_team`：Agent开发团队，包含产品经理、工程师、测试人员三种角色，可以协作完成web应用的开发测试任务，可交付完整的项目文档和代码。
+
+你可以基于配置模板进行修改，为每个Agent设置不同的模型、工具、系统提示词。
 
 #### 1.3 运行
 
+你可以直接通过命令运行任务，通过 -t 参数指定配置文件中的团队，通过 -q 参数指定需要提出的问题：
+
 ```bash
-python main.py -l                   # 查看可用agent team                 
-python main.py -t software_team     # 运行名为 'software_team' 的team
+python main.py -t general_team -q "帮我分析多智能体技术发展趋势"
+python main.py -t software_team -q "帮我为AgentMesh项目开发一个预约体验的表单页面"
 ```
 
-进入交互模式后输入需求内容即可开始运行。
+同时也可以进入命令行交互模式，通过输入问题进行多轮对话：
 
-### 二、 SDK开发
+```bash
+python main.py -l                       # 查看可用agent team
+python main.py -t general_team          # 指定一个team
+```
 
-`Agentmesh`的核心模块通过SDK对外提供，开发者可基于该SDK快速构建智能体及多智能体团队。
+### 2. Docker运行
+
+下载 docker compose 配置文件：
+
+```bash
+curl -O https://raw.githubusercontent.com/MinimalFuture/AgentMesh/main/docker-compose.yml
+```
+
+下载配置模板，参考 1.2 中的配置说明，填写`config.yaml`配置文件中的模型API Key：
+
+```bash
+curl -o config.yaml https://raw.githubusercontent.com/MinimalFuture/AgentMesh/main/config-template.yaml
+```
+
+运行docker容器：
+
+```bash
+docker-compose run --rm agentmesh bash
+```
+
+容器启动后将进入命令行，与 1.3 中的使用方式相同，指定team后进入交互模式后即可开始对话：
+
+```bash
+python main.py -l                       # 查看可用agent team
+python main.py -t general_team          # 指定一个team后开始多轮对话
+```
+
+### 3. SDK集成
+
+`Agentmesh`的核心模块通过SDK对外提供，开发者可基于该SDK构建智能体及多智能体团队，适用于在已有应用中快速获得多智能体协作能力。
 
 安装SDK依赖:
 
@@ -88,7 +126,7 @@ from agentmesh import AgentTeam, Agent, LLMModel
 from agentmesh.tools import *
 
 # model
-model = LLMModel(model="gpt-4o", api_key="YOUR_API_KEY")
+model = LLMModel(model="gpt-4.1", api_key="YOUR_API_KEY")
 
 # team build and add agents
 team = AgentTeam(name="software_team", description="A software development team", model=model)
@@ -96,15 +134,15 @@ team = AgentTeam(name="software_team", description="A software development team"
 team.add(Agent(name="PM", description="Responsible for product requirements and documentation",
                system_prompt="You are an experienced product manager who creates clear and comprehensive PRDs"))
 
-team.add(Agent(name="Developer", description="Implements code based on PRD and architecture design", model=model,
-               system_prompt="You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements and architecture guidelines precisely",
+team.add(Agent(name="Developer", description="Implements code based on PRDs", model=model,
+               system_prompt="You are a proficient developer who writes clean, efficient, and maintainable code. Follow the PRD requirements precisely.",
                tools=[Calculator(), GoogleSearch()]))
 
 # run user task
-team.run(task="Write a Snake client game")
+result = team.run(task="Write a Snake client game")
 ```
 
-### 三、Web服务运行
+### 4. Web服务运行
 
 即将支持
 
@@ -122,7 +160,7 @@ team.run(task="Write a Snake client game")
 ### 模型
 
 - **OpenAI**: 支持 GPT 系列模型，推荐使用 `gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`
-- **Claude**: 支持 Claude系列模型，推荐使用 `claude-3-7-sonnect-latest`
+- **Claude**: 支持 Claude系列模型，推荐使用 `claude-3-7-sonnet-latest`
 - **DeepSeek**: 支持 DeepSeek 系列模型，推荐使用 `deepseek-chat`
 - **Ollama**: 支持本地部署的开源模型 (即将支持)
 
@@ -132,11 +170,12 @@ team.run(task="Write a Snake client game")
 - **current_time**: 获取当前时间工具，解决模型时间感知问题
 - **browser**: 浏览器操作工具，基于browser-use实现，支持网页访问、内容提取和交互操作
 - **google_search**: 搜索引擎工具，获取最新信息和知识
+- **file_save**: 将Agent输出内容保存在本地工作空间中
 - **MCP**: 通过支持MCP协议获得更多工具能力（即将支持）
 
 ## 贡献
 
-Star支持和关注本项目，可以接受最新的项目更新通知。
+⭐️ Star支持和关注本项目，可以接受最新的项目更新通知。
 
 欢迎 [提交PR](https://github.com/MinimalFuture/AgentMesh/pulls)
 来共同参与这个项目，遇到问题或有任何想法可 [提交Issues](https://github.com/MinimalFuture/AgentMesh/issues) 进行反馈。
