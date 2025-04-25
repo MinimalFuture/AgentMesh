@@ -18,6 +18,10 @@ AgentMesh uses a modular layered design for flexible and extensible multi-agent 
   protocol support coming soon for even more tool extensions.
 - **Multi-Platform**: Run via CLI, Docker, or SDK. WebUI and integration with common software coming soon.
 
+## Demo
+
+https://github.com/user-attachments/assets/a0e565c4-94ef-4ddf-843d-a0c5aab640c6
+
 ## Quick Start
 
 Choose one of these three ways to build and run your agent team:
@@ -63,12 +67,11 @@ cp config-template.yaml config.yaml
 
 Add your model `api_key` - AgentMesh supports `openai`, `claude`, `deepseek`, `qwen`, and others.
 
-The template includes two examples for quick testing:
-
-- `general_team`: A single general-purpose agent skilled in search, research, and information organization. Recommended to configure with google_search and browser tools.
-- `software_team`: A development team with three roles (product manager, engineer, and tester) that can collaborate on web application development and testing tasks, delivering complete project documentation and code.
-
-You can modify the template to customize different models, tools, system prompts, and other configurations for each agent.
+> The template includes two examples:
+> - `general_team`: A general-purpose agent for search and research tasks.
+> - `software_team`: A development team with three roles that collaborates on web applications.
+>
+> You can customize models, tools, and system prompts for each agent.
 
 #### 1.3 Execution
 
@@ -106,7 +109,8 @@ Run the Docker container:
 docker-compose run --rm agentmesh bash
 ```
 
-Once the container starts, you'll enter the command line. The usage is the same as in section 1.3 - specify a team to start the interactive mode:
+Once the container starts, you'll enter the command line. The usage is the same as in section 1.3 - specify a team to
+start the interactive mode:
 
 ```bash
 python main.py -l                               # List available agent teams
