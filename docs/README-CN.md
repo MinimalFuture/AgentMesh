@@ -9,12 +9,12 @@ AgentMesh是一个开源的 **多智能体 (Multi-Agent) 平台** ，提供开�
 
 AgentMesh 采用模块化分层设计，提供灵活且可扩展的多智能体系统构建能力：
 
+<img width="700" alt="agentmesh-architecture-diagram" src="https://github.com/user-attachments/assets/81c78d9f-876b-43b8-a94e-117474b9efc5" />
+
 - **多Agent协同**：支持多Agent角色定义、任务分配、多轮自主决策，即将支持与远程异构Agent的通信协议
 - **多模态模型**：支持 OpenAI、Claude、DeepSeek 等主流大语言模型，统一接口设计支持无缝切换
 - **可扩展工具**：内置搜索引擎、浏览器、文件系统、终端等工具，并将通过支持 MCP 协议获得更多工具扩展
 - **多端运行**：支持命令行、Docker、SDK 等多种运行方式，即将支持 WebUI 及多种常用软件的集成
-
-<img width="720" alt="agentmesh-architecture-diagram" src="https://github.com/user-attachments/assets/81c78d9f-876b-43b8-a94e-117474b9efc5" />
 
 ## Demo
 
