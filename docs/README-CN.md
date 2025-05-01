@@ -14,6 +14,8 @@ AgentMesh 采用模块化分层设计，提供灵活且可扩展的多智能体�
 - **可扩展工具**：内置搜索引擎、浏览器、文件系统、终端等工具，并将通过支持 MCP 协议获得更多工具扩展
 - **多端运行**：支持命令行、Docker、SDK 等多种运行方式，即将支持 WebUI 及多种常用软件的集成
 
+<img width="720" alt="agentmesh-architecture-diagram" src="https://github.com/user-attachments/assets/81c78d9f-876b-43b8-a94e-117474b9efc5" />
+
 ## Demo
 
 https://github.com/user-attachments/assets/e2e553c9-bc4a-448d-a5d4-61be21765277

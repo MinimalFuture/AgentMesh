@@ -10,6 +10,8 @@ collaboration.
 
 AgentMesh uses a modular layered design for flexible and extensible multi-agent systems:
 
+<img width="720" alt="agentmesh-architecture-diagram" src="https://github.com/user-attachments/assets/81c78d9f-876b-43b8-a94e-117474b9efc5" />
+
 - **Agent Collaboration**: Support for role definition, task allocation, and multi-turn autonomous decision-making.
   Communication protocol for remote heterogeneous agents coming soon.
 - **Multi-Modal Models**: Seamless integration with OpenAI, Claude, DeepSeek, and other leading LLMs through a unified
@@ -17,6 +19,8 @@ AgentMesh uses a modular layered design for flexible and extensible multi-agent 
 - **Extensible Tools**: Built-in search engines, browser automation, file system access, and terminal tools. MCP
   protocol support coming soon for even more tool extensions.
 - **Multi-Platform**: Run via CLI, Docker, or SDK. WebUI and integration with common software coming soon.
+
+<img width="720" alt="agentmesh-architecture-diagram" src="https://github.com/user-attachments/assets/81c78d9f-876b-43b8-a94e-117474b9efc5" />
 
 ## Demo
 
