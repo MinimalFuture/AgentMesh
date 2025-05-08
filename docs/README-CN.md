@@ -51,7 +51,7 @@ pip install -r requirements.txt
 如需使用浏览器工具，还需要额外安装依赖 (可选，需要 python3.11+):
 
 ```bash
-pip install browser-use
+pip install browser-use==0.1.40
 playwright install
 ```
 

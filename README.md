@@ -55,7 +55,7 @@ pip install -r requirements.txt
 For browser tools, install additional dependencies (python3.11+ required):
 
 ```bash
-pip install browser-use
+pip install browser-use==0.1.40
 playwright install
 ```
 

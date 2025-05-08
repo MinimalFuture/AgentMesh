@@ -141,7 +141,7 @@ class BrowserTool(BaseTool):
             return ToolResult.fail(result=f"Error executing browser action: {str(e)}")
 
     async def _get_page_state(self, context: BrowserContext):
-        state = await context.get_state()
+        state = await self._get_state(context)
         include_attributes = ["img", "div", "button", "input"]
         elements = state.element_tree.clickable_elements_to_string(include_attributes)
         pattern = r'\[\d+\]<[^>]+\/>'
@@ -156,6 +156,12 @@ class BrowserTool(BaseTool):
             "interactive_elements": interactive_elements,
         }
         return page_state
+
+    async def _get_state(self, context: BrowserContext, cache_clickable_elements_hashes=True):
+        try:
+            return await context.get_state()
+        except TypeError:
+            return await context.get_state(cache_clickable_elements_hashes=cache_clickable_elements_hashes)
 
     async def _get_page_info(self, context: BrowserContext):
         page_state = await self._get_page_state(context)
