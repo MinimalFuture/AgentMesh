@@ -179,6 +179,8 @@ Coming soon
 - **current_time**: Current time retrieval tool solving model time awareness issues
 - **browser**: Web browsing tool based on browser-use, supporting web access, content extraction, and interaction
 - **google_search**: Search engine tool for retrieving up-to-date information
+- **file_save**: Tool for saving agent outputs to the local workspace
+- **terminal**: Command-line tool for executing system commands safely with security restrictions
 - **MCP**: Extended tool capabilities through MCP protocol support (coming soon)
 
 ## Contribution

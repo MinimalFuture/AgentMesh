@@ -7,6 +7,7 @@ from agentmesh.tools.google_search.google_search import GoogleSearch
 from agentmesh.tools.calculator.calculator import Calculator
 from agentmesh.tools.current_time.current_time import CurrentTime
 from agentmesh.tools.file_save.file_save import FileSave
+from agentmesh.tools.terminal.terminal import Terminal
 
 
 # Delayed import for BrowserTool
@@ -38,7 +39,8 @@ __all__ = [
     'Calculator',
     'CurrentTime',
     'FileSave',
-    'BrowserTool'
+    'BrowserTool',
+    'Terminal'
 ]
 
 """

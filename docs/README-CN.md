@@ -176,6 +176,7 @@ result = team.run(task="Write a Snake client game")
 - **browser**: 浏览器操作工具，基于browser-use实现，支持网页访问、内容提取和交互操作
 - **google_search**: 搜索引擎工具，获取最新信息和知识
 - **file_save**: 将Agent输出内容保存在本地工作空间中
+- **terminal**: 终端命令执行工具，支持安全地执行系统命令
 - **MCP**: 通过支持MCP协议获得更多工具能力（即将支持）
 
 ## 贡献
