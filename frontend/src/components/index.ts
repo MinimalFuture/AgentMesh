@@ -1,0 +1,10 @@
+// Component exports
+export { default as FloatingToggleButton } from './FloatingToggleButton.vue'
+export { default as TaskSidebar } from './TaskSidebar.vue'
+export { default as WelcomeSection } from './WelcomeSection.vue'
+export { default as AgentMessage } from './AgentMessage.vue'
+export { default as AgentProcessPanel } from './AgentProcessPanel.vue'
+export { default as ToolResultsPanel } from './ToolResultsPanel.vue'
+export { default as ChatInput } from './ChatInput.vue'
+export { default as SplitView } from './SplitView.vue'
+export { default as MarkdownRenderer } from './MarkdownRenderer.vue' 

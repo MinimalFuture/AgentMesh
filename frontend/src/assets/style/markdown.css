@@ -1,0 +1,83 @@
+/* Markdown content styles using Tailwind CSS */
+.markdown-content {
+  @apply ml-0;
+  @apply text-sm;
+}
+
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  @apply my-4 mb-2 font-semibold text-gray-700;
+}
+
+.markdown-content :deep(h1) { @apply text-lg; }
+.markdown-content :deep(h2) { @apply text-base; }
+.markdown-content :deep(h3) { @apply text-sm; }
+.markdown-content :deep(h4) { @apply text-sm; }
+.markdown-content :deep(h5) { @apply text-xs; }
+.markdown-content :deep(h6) { @apply text-xs; }
+
+.markdown-content :deep(p) {
+  @apply my-2 leading-relaxed;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  @apply my-2 pl-5;
+}
+
+.markdown-content :deep(li) {
+  @apply my-1 leading-relaxed;
+}
+
+.markdown-content :deep(blockquote) {
+  @apply my-3 py-2 px-3 border-l-4 border-gray-200 bg-black/5 rounded-r-md;
+}
+
+.markdown-content :deep(code) {
+  @apply font-mono text-xs bg-black/5 px-1 py-0.5 rounded text-green-600;
+}
+
+.markdown-content :deep(pre) {
+  @apply bg-black/5 border border-black/10 rounded-md p-3 my-2 overflow-x-auto;
+}
+
+.markdown-content :deep(pre code) {
+  @apply bg-transparent p-0 rounded-none text-gray-700 whitespace-pre;
+}
+
+.markdown-content :deep(strong) {
+  @apply font-semibold text-gray-700;
+}
+
+.markdown-content :deep(em) {
+  @apply italic text-gray-700;
+}
+
+.markdown-content :deep(a) {
+  @apply text-blue-500 no-underline;
+}
+
+.markdown-content :deep(a:hover) {
+  @apply underline;
+}
+
+.markdown-content :deep(table) {
+  @apply w-full border-collapse my-3 text-xs;
+}
+
+.markdown-content :deep(th),
+.markdown-content :deep(td) {
+  @apply border border-black/10 p-1.5 text-left;
+}
+
+.markdown-content :deep(th) {
+  @apply bg-black/5 font-semibold;
+}
+
+.markdown-content :deep(hr) {
+  @apply border-none border-t border-black/10 my-4;
+} 

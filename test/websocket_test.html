@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentMesh WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        select {
+            height: 40px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .messages {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            height: 500px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .message.sent {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .message.received {
+            background-color: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .message.error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+
+        .message.thinking {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .message.tool {
+            background-color: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+
+        .message.result {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .event-type {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .team-info {
+            background-color: #e8f5e8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .team-info h3 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+
+        .team-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>AgentMesh WebSocket Test</h1>
+
+    <div id="status" class="status disconnected">
+        Disconnected
+    </div>
+
+    <div class="team-info">
+        <h3>Available Teams</h3>
+        <p><strong>general_team:</strong> A versatile research and information agent team</p>
+        <p><strong>software_team:</strong> A software development team with product manager, developer and tester</p>
+    </div>
+
+    <div class="input-group">
+        <label for="teamSelect">Select Team:</label>
+        <select id="teamSelect">
+            <option value="general_team">General Team</option>
+            <option value="software_team">Software Team</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="taskInput">Task Description:</label>
+        <textarea id="taskInput" placeholder="Enter your task description here...">请告诉我今天的日期和时间</textarea>
+    </div>
+
+    <div class="input-group">
+        <button id="connectBtn" onclick="connect()">Connect</button>
+        <button id="sendBtn" onclick="sendTask()" disabled>Send Task</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        <button onclick="clearMessages()">Clear Messages</button>
+    </div>
+
+    <div class="input-group">
+        <label>Messages:</label>
+        <div id="messages" class="messages"></div>
+    </div>
+</div>
+
+<script>
+    let ws = null;
+    let messageCount = 0;
+
+    function updateStatus(connected) {
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+
+        if (connected) {
+            statusDiv.textContent = 'Connected';
+            statusDiv.className = 'status connected';
+            connectBtn.disabled = true;
+            sendBtn.disabled = false;
+            disconnectBtn.disabled = false;
+        } else {
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.className = 'status disconnected';
+            connectBtn.disabled = false;
+            sendBtn.disabled = true;
+            disconnectBtn.disabled = true;
+        }
+    }
+
+    function addMessage(content, type = 'received') {
+        const messagesDiv = document.getElementById('messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+
+        const timestamp = new Date().toLocaleTimeString();
+
+        // Handle different content types
+        let displayContent = content;
+        if (typeof content === 'object') {
+            displayContent = JSON.stringify(content, null, 2);
+        }
+
+        // Add event type indicator for better readability
+        let eventType = type.toUpperCase();
+        if (typeof content === 'object' && content.event) {
+            eventType = content.event.toUpperCase();
+        }
+
+        messageDiv.innerHTML = `
+                <div><strong>[${timestamp}]</strong> <span class="event-type">${eventType}</span></div>
+                <pre>${displayContent}</pre>
+            `;
+
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function connect() {
+        try {
+            ws = new WebSocket('ws://localhost:8000/api/v1/task/process');
+
+            ws.onopen = function (event) {
+                console.log('WebSocket connected');
+                updateStatus(true);
+                addMessage('WebSocket connection established', 'received');
+            };
+
+            ws.onmessage = function (event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    addMessage(data, 'received');
+
+                    // Check if task is completed
+                    // if (data.event === 'task_result') {
+                    //     addMessage('🎉 Task completed!', 'received');
+                    // }
+
+                    // Add visual indicators for different message types
+                    if (data.event === 'agent_thinking') {
+                        addMessage('🧠 Agent is thinking...', 'thinking');
+                    } else if (data.event === 'tool_decision') {
+                        addMessage('🛠️ Tool decision made', 'tool');
+                    } else if (data.event === 'tool_execute') {
+                        addMessage('⚡ Tool execution', 'tool');
+                    }
+                    // else if (data.event === 'agent_result') {
+                    //     addMessage('💬 Agent result', 'result');
+                    // }
+                } catch (e) {
+                    addMessage(`Error parsing message: ${e.message}`, 'error');
+                }
+            };
+
+            ws.onclose = function (event) {
+                console.log('WebSocket disconnected');
+                updateStatus(false);
+                addMessage('WebSocket connection closed', 'received');
+            };
+
+            ws.onerror = function (error) {
+                console.error('WebSocket error:', error);
+                addMessage(`WebSocket error: ${error}`, 'error');
+            };
+
+        } catch (error) {
+            addMessage(`Connection error: ${error.message}`, 'error');
+        }
+    }
+
+    function sendTask() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            addMessage('WebSocket is not connected', 'error');
+            return;
+        }
+
+        const taskInput = document.getElementById('taskInput').value.trim();
+        const teamSelect = document.getElementById('teamSelect').value;
+
+        if (!taskInput) {
+            addMessage('Please enter a task description', 'error');
+            return;
+        }
+
+        const message = {
+            event: 'user_input',
+            timestamp: new Date().toISOString(),
+            data: {
+                text: taskInput,
+                team: teamSelect
+            }
+        };
+
+        try {
+            ws.send(JSON.stringify(message));
+            addMessage(message, 'sent');
+        } catch (error) {
+            addMessage(`Error sending message: ${error.message}`, 'error');
+        }
+    }
+
+    function disconnect() {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+    }
+
+    function clearMessages() {
+        document.getElementById('messages').innerHTML = '';
+    }
+
+    // Auto-connect on page load
+    window.onload = function () {
+        // Uncomment the line below to auto-connect
+        // connect();
+    };
+</script>
+</body>
+</html> 
