@@ -209,9 +209,39 @@ Coming soon
 - **current_time**: Current time retrieval tool solving model time awareness issues
 - **browser**: Web browsing tool based on browser-use, supporting web access, content extraction, and interaction
 - **google_search**: Search engine tool for retrieving up-to-date information
+- **parallel_search**: Opt-in, keyless web search through Parallel's HTTP MCP server
 - **file_save**: Tool for saving agent outputs to the local workspace
 - **terminal**: Command-line tool for executing system commands safely with security restrictions
 - **MCP**: Extended tool capabilities through MCP protocol support (coming soon)
+
+### Parallel Search MCP
+
+Add `parallel_search` to an agent's `tools` list in `config.yaml` to enable
+[Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp).
+It uses `https://search.parallel.ai/mcp` anonymously through HTTP, with the core
+dependencies already installed. Existing team tool selections are unchanged.
+The free endpoint is intended for exploration and light use and has rate limits;
+your configured model still requires its own credentials and may incur inference costs.
+
+For the SDK, use `tools=[ParallelSearch()]` when creating an `Agent`. You can also
+run a search directly without a model:
+
+```python
+from agentmesh.tools import ParallelSearch
+
+result = ParallelSearch().execute({
+    "objective": "Find the official Python documentation for asyncio tasks",
+    "search_queries": ["Python asyncio tasks documentation"]
+})
+print(result.status, result.result)
+```
+
+The result preserves MCP content and structured results, including source URLs
+and excerpts. HTTP, protocol and server tool errors return `ToolResult` with
+`status="error"`; HTTP errors include the status and any `Retry-After` header in
+`ext_data`. Each request has a 60-second timeout, configurable via
+`tools.parallel_search.timeout` in `config.yaml` (seconds).
+This tool exposes `web_search`; general MCP server loading is still planned.
 
 ## Contribution
 

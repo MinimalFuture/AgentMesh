@@ -4,6 +4,7 @@ from agentmesh.tools.tool_manager import ToolManager
 
 # Import specific tools
 from agentmesh.tools.google_search.google_search import GoogleSearch
+from agentmesh.tools.parallel_search.parallel_search import ParallelSearch
 from agentmesh.tools.calculator.calculator import Calculator
 from agentmesh.tools.current_time.current_time import CurrentTime
 from agentmesh.tools.file_save.file_save import FileSave
@@ -49,6 +50,7 @@ __all__ = [
     'BaseTool',
     'ToolManager',
     'GoogleSearch',
+    'ParallelSearch',
     'Calculator',
     'CurrentTime',
     'FileSave',
